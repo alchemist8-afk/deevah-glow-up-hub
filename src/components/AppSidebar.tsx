@@ -1,5 +1,6 @@
 
 import { Calendar, Home, Scissors, ShoppingBag, Gamepad2, UtensilsCrossed, LogIn, Star } from "lucide-react";
+import { Link, useLocation } from "react-router-dom";
 import {
   Sidebar,
   SidebarContent,
@@ -47,15 +48,17 @@ const menuItems = [
 ];
 
 export function AppSidebar() {
+  const location = useLocation();
+
   return (
     <Sidebar className="border-r border-border/50">
       <SidebarHeader className="p-6">
-        <div className="flex items-center space-x-2">
-          <div className="w-8 h-8 bg-gradient-deevah rounded-lg flex items-center justify-center">
+        <Link to="/" className="flex items-center space-x-2">
+          <div className="w-8 h-8 bg-gradient-to-r from-purple-600 to-pink-600 rounded-lg flex items-center justify-center">
             <Star className="w-5 h-5 text-white" />
           </div>
-          <span className="text-xl font-bold gradient-text">Deevah</span>
-        </div>
+          <span className="text-xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">Deevah</span>
+        </Link>
       </SidebarHeader>
       
       <SidebarContent>
@@ -68,13 +71,15 @@ export function AppSidebar() {
               {menuItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild className="w-full">
-                    <a 
-                      href={item.url} 
-                      className="flex items-center space-x-3 px-3 py-2 rounded-lg hover:bg-accent transition-colors"
+                    <Link 
+                      to={item.url} 
+                      className={`flex items-center space-x-3 px-3 py-2 rounded-lg hover:bg-accent transition-colors ${
+                        location.pathname === item.url ? 'bg-accent text-accent-foreground' : ''
+                      }`}
                     >
                       <item.icon className="w-5 h-5" />
                       <span>{item.title}</span>
-                    </a>
+                    </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
@@ -85,13 +90,13 @@ export function AppSidebar() {
 
       <SidebarFooter className="p-6">
         <SidebarMenuButton asChild className="w-full">
-          <a 
-            href="/auth" 
-            className="flex items-center space-x-3 px-4 py-3 bg-gradient-deevah text-white rounded-lg hover:opacity-90 transition-opacity"
+          <Link 
+            to="/auth" 
+            className="flex items-center space-x-3 px-4 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:opacity-90 transition-opacity"
           >
             <LogIn className="w-5 h-5" />
             <span>Login / Signup</span>
-          </a>
+          </Link>
         </SidebarMenuButton>
       </SidebarFooter>
     </Sidebar>
