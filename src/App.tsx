@@ -17,6 +17,7 @@ import NailsPage from "./pages/NailsPage";
 import DreadlocksPage from "./pages/DreadlocksPage";
 import MassagePage from "./pages/MassagePage";
 import BusinessDashboard from "./pages/BusinessDashboard";
+import ArtistDashboard from "./pages/ArtistDashboard";
 
 const queryClient = new QueryClient();
 
@@ -39,6 +40,7 @@ const App = () => (
           <Route path="/dreadlocks" element={<DreadlocksPage />} />
           <Route path="/massage" element={<MassagePage />} />
           <Route path="/business" element={<BusinessDashboard />} />
+          <Route path="/artist-dashboard" element={<ArtistDashboard />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

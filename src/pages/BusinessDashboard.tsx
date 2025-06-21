@@ -4,7 +4,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, TrendingUp, DollarSign, Users, Calendar, Edit3, Trash2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Plus, TrendingUp, DollarSign, Users, Calendar, Edit3, Trash2, Star, Image, Package, Utensils } from "lucide-react";
 
 const businessStats = [
   {
@@ -45,7 +48,8 @@ const services = [
     price: "$150",
     duration: "4-5 hours",
     status: "active",
-    bookings: 23
+    bookings: 23,
+    rating: 4.8
   },
   {
     id: 2,
@@ -54,7 +58,8 @@ const services = [
     price: "$45",
     duration: "1.5 hours",
     status: "active", 
-    bookings: 31
+    bookings: 31,
+    rating: 4.9
   },
   {
     id: 3,
@@ -63,7 +68,29 @@ const services = [
     price: "$90",
     duration: "1 hour",
     status: "draft",
-    bookings: 0
+    bookings: 0,
+    rating: 0
+  }
+];
+
+const products = [
+  {
+    id: 1,
+    name: "Premium Hair Oil",
+    category: "Hair Care",
+    price: "$25",
+    stock: 45,
+    status: "active",
+    orders: 23
+  },
+  {
+    id: 2,
+    name: "Moisturizing Face Mask",
+    category: "Skincare",
+    price: "$18",
+    stock: 67,
+    status: "featured",
+    orders: 41
   }
 ];
 
@@ -74,7 +101,8 @@ const menuItems = [
     category: "Healthy Meals",
     price: "$18",
     status: "active",
-    orders: 45
+    orders: 45,
+    description: "Quinoa bowl with fresh vegetables and avocado"
   },
   {
     id: 2,
@@ -82,7 +110,8 @@ const menuItems = [
     category: "Drinks",
     price: "$12",
     status: "featured",
-    orders: 67
+    orders: 67,
+    description: "Antioxidant-rich smoothie with berries and collagen"
   }
 ];
 
@@ -94,7 +123,7 @@ const BusinessDashboard = () => {
           <div className="flex items-center justify-between mb-8">
             <div>
               <h1 className="text-3xl font-bold text-gray-900">Business Dashboard</h1>
-              <p className="text-gray-600">Manage your services, menu items, and track performance</p>
+              <p className="text-gray-600">Manage your beauty business, track performance and grow your clientele</p>
             </div>
             <Button className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700">
               <Plus className="w-4 h-4 mr-2" />
@@ -127,8 +156,9 @@ const BusinessDashboard = () => {
           </div>
 
           <Tabs defaultValue="services" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="services">Beauty Services</TabsTrigger>
+              <TabsTrigger value="products">Products</TabsTrigger>
               <TabsTrigger value="food">Food & Drinks</TabsTrigger>
               <TabsTrigger value="analytics">Analytics</TabsTrigger>
             </TabsList>
@@ -152,6 +182,12 @@ const BusinessDashboard = () => {
                             <Badge variant={service.status === 'active' ? 'default' : 'secondary'}>
                               {service.status}
                             </Badge>
+                            {service.rating > 0 && (
+                              <div className="flex items-center space-x-1">
+                                <Star className="w-4 h-4 text-yellow-500 fill-current" />
+                                <span className="text-sm">{service.rating}</span>
+                              </div>
+                            )}
                           </div>
                           <div className="flex items-center space-x-4 text-sm text-gray-600 mt-1">
                             <span>{service.category}</span>
@@ -175,10 +211,63 @@ const BusinessDashboard = () => {
               </Card>
             </TabsContent>
 
+            <TabsContent value="products" className="space-y-6">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <CardTitle className="flex items-center space-x-2">
+                    <Package className="w-5 h-5" />
+                    <span>Beauty Products Store</span>
+                  </CardTitle>
+                  <Button>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Product
+                  </Button>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {products.map((product) => (
+                      <div key={product.id} className="flex items-center justify-between p-4 border rounded-lg">
+                        <div className="flex items-center space-x-4">
+                          <div className="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center">
+                            <Image className="w-8 h-8 text-gray-400" />
+                          </div>
+                          <div className="flex-1">
+                            <div className="flex items-center space-x-3">
+                              <h3 className="font-semibold">{product.name}</h3>
+                              <Badge variant={product.status === 'featured' ? 'default' : 'secondary'}>
+                                {product.status}
+                              </Badge>
+                            </div>
+                            <div className="flex items-center space-x-4 text-sm text-gray-600 mt-1">
+                              <span>{product.category}</span>
+                              <span className="font-medium text-green-600">{product.price}</span>
+                              <span>{product.stock} in stock</span>
+                              <span>{product.orders} orders</span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Button size="sm" variant="outline">
+                            <Edit3 className="w-4 h-4" />
+                          </Button>
+                          <Button size="sm" variant="outline">
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
             <TabsContent value="food" className="space-y-6">
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
-                  <CardTitle>Menu Items</CardTitle>
+                  <CardTitle className="flex items-center space-x-2">
+                    <Utensils className="w-5 h-5" />
+                    <span>Menu Items</span>
+                  </CardTitle>
                   <Button>
                     <Plus className="w-4 h-4 mr-2" />
                     Add Menu Item
@@ -188,17 +277,23 @@ const BusinessDashboard = () => {
                   <div className="space-y-4">
                     {menuItems.map((item) => (
                       <div key={item.id} className="flex items-center justify-between p-4 border rounded-lg">
-                        <div className="flex-1">
-                          <div className="flex items-center space-x-3">
-                            <h3 className="font-semibold">{item.name}</h3>
-                            <Badge variant={item.status === 'featured' ? 'default' : 'secondary'}>
-                              {item.status}
-                            </Badge>
+                        <div className="flex items-center space-x-4">
+                          <div className="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center">
+                            <Utensils className="w-8 h-8 text-gray-400" />
                           </div>
-                          <div className="flex items-center space-x-4 text-sm text-gray-600 mt-1">
-                            <span>{item.category}</span>
-                            <span>{item.price}</span>
-                            <span>{item.orders} orders</span>
+                          <div className="flex-1">
+                            <div className="flex items-center space-x-3">
+                              <h3 className="font-semibold">{item.name}</h3>
+                              <Badge variant={item.status === 'featured' ? 'default' : 'secondary'}>
+                                {item.status}
+                              </Badge>
+                            </div>
+                            <p className="text-sm text-gray-600 mt-1">{item.description}</p>
+                            <div className="flex items-center space-x-4 text-sm text-gray-600 mt-1">
+                              <span>{item.category}</span>
+                              <span className="font-medium text-green-600">{item.price}</span>
+                              <span>{item.orders} orders</span>
+                            </div>
                           </div>
                         </div>
                         <div className="flex items-center space-x-2">
@@ -257,7 +352,7 @@ const BusinessDashboard = () => {
 
                 <Card>
                   <CardHeader>
-                    <CardTitle>Top Performing Services</CardTitle>
+                    <CardTitle>Top Performing Offerings</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3">
@@ -272,6 +367,10 @@ const BusinessDashboard = () => {
                       <div className="flex justify-between items-center">
                         <span className="text-sm">Beauty Smoothie</span>
                         <span className="text-sm font-semibold">67 orders</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm">Face Mask</span>
+                        <span className="text-sm font-semibold">41 sales</span>
                       </div>
                     </div>
                   </CardContent>
