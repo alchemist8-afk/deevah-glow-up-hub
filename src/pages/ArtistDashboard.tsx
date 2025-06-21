@@ -1,4 +1,3 @@
-
 import { Layout } from "@/components/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,6 +5,9 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Calendar, DollarSign, Star, TrendingUp, Clock, MapPin, Check, X, Edit, Plus } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useBooking } from "@/contexts/BookingContext";
+import { useToast } from "@/hooks/use-toast";
 
 const artistData = {
   name: "Maya Johnson",
@@ -16,40 +18,22 @@ const artistData = {
   responseRate: "95%"
 };
 
-const pendingBookings = [
-  {
-    id: 1,
-    client: "Sarah Williams",
-    service: "Box Braids Installation",
-    date: "Today, 2:00 PM",
-    duration: "4 hours",
-    price: "$150",
-    location: "Client's Home"
-  },
-  {
-    id: 2,
-    client: "Angela Davis",
-    service: "Cornrow Styling",
-    date: "Tomorrow, 10:00 AM",
-    duration: "2 hours",
-    price: "$80",
-    location: "Your Salon"
-  }
-];
-
-const upcomingJobs = [
-  {
-    id: 3,
-    client: "Lisa Chen",
-    service: "Protective Style Consultation",
-    date: "Dec 25, 3:00 PM",
-    duration: "1 hour",
-    price: "$60",
-    status: "confirmed"
-  }
-];
-
 const ArtistDashboard = () => {
+  const { user } = useAuth();
+  const { getUserBookings, updateBookingStatus } = useBooking();
+  const { toast } = useToast();
+
+  const pendingBookings = getUserBookings(user?.id || '', 'provider').filter(b => b.status === 'pending');
+  const upcomingJobs = getUserBookings(user?.id || '', 'provider').filter(b => b.status === 'accepted');
+
+  const handleBookingAction = (bookingId: string, action: 'accept' | 'reject') => {
+    updateBookingStatus(bookingId, action === 'accept' ? 'accepted' : 'rejected');
+    toast({
+      title: action === 'accept' ? "Booking Accepted!" : "Booking Rejected",
+      description: `You have ${action}ed the booking request.`
+    });
+  };
+
   return (
     <Layout>
       <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50">
@@ -57,11 +41,11 @@ const ArtistDashboard = () => {
           <div className="flex items-center justify-between mb-8">
             <div className="flex items-center space-x-4">
               <Avatar className="w-16 h-16">
-                <AvatarImage src="https://images.unsplash.com/photo-1494790108755-2616b612b1-" />
-                <AvatarFallback>MJ</AvatarFallback>
+                <AvatarImage src={user?.avatar} />
+                <AvatarFallback>{user?.name?.split(' ').map(n => n[0]).join('') || 'MJ'}</AvatarFallback>
               </Avatar>
               <div>
-                <h1 className="text-3xl font-bold text-gray-900">Welcome back, {artistData.name}!</h1>
+                <h1 className="text-3xl font-bold text-gray-900">Welcome back, {user?.name || artistData.name}!</h1>
                 <p className="text-gray-600">Ready to create beautiful transformations today?</p>
               </div>
             </div>
@@ -143,42 +127,55 @@ const ArtistDashboard = () => {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
-                      {pendingBookings.map((booking) => (
-                        <div key={booking.id} className="border rounded-lg p-4">
-                          <div className="flex items-center justify-between mb-3">
-                            <div>
-                              <h3 className="font-semibold text-lg">{booking.service}</h3>
-                              <p className="text-gray-600">{booking.client}</p>
+                      {pendingBookings.length === 0 ? (
+                        <p className="text-center text-gray-500 py-8">No pending requests</p>
+                      ) : (
+                        pendingBookings.map((booking) => (
+                          <div key={booking.id} className="border rounded-lg p-4">
+                            <div className="flex items-center justify-between mb-3">
+                              <div>
+                                <h3 className="font-semibold text-lg">{booking.serviceName}</h3>
+                                <p className="text-gray-600">{booking.clientName}</p>
+                              </div>
+                              <div className="text-right">
+                                <p className="font-bold text-green-600">${booking.price}</p>
+                                <p className="text-sm text-gray-500">{booking.duration}</p>
+                              </div>
                             </div>
-                            <div className="text-right">
-                              <p className="font-bold text-green-600">{booking.price}</p>
-                              <p className="text-sm text-gray-500">{booking.duration}</p>
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center space-x-4 text-sm text-gray-600">
+                                <span className="flex items-center">
+                                  <Calendar className="w-4 h-4 mr-1" />
+                                  {booking.date}
+                                </span>
+                                <span className="flex items-center">
+                                  <MapPin className="w-4 h-4 mr-1" />
+                                  {booking.location}
+                                </span>
+                              </div>
+                              <div className="flex space-x-2">
+                                <Button 
+                                  size="sm" 
+                                  variant="outline" 
+                                  className="text-red-600 border-red-600"
+                                  onClick={() => handleBookingAction(booking.id, 'reject')}
+                                >
+                                  <X className="w-4 h-4 mr-1" />
+                                  Decline
+                                </Button>
+                                <Button 
+                                  size="sm" 
+                                  className="bg-green-600 hover:bg-green-700"
+                                  onClick={() => handleBookingAction(booking.id, 'accept')}
+                                >
+                                  <Check className="w-4 h-4 mr-1" />
+                                  Accept
+                                </Button>
+                              </div>
                             </div>
                           </div>
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-4 text-sm text-gray-600">
-                              <span className="flex items-center">
-                                <Calendar className="w-4 h-4 mr-1" />
-                                {booking.date}
-                              </span>
-                              <span className="flex items-center">
-                                <MapPin className="w-4 h-4 mr-1" />
-                                {booking.location}
-                              </span>
-                            </div>
-                            <div className="flex space-x-2">
-                              <Button size="sm" variant="outline" className="text-red-600 border-red-600">
-                                <X className="w-4 h-4 mr-1" />
-                                Decline
-                              </Button>
-                              <Button size="sm" className="bg-green-600 hover:bg-green-700">
-                                <Check className="w-4 h-4 mr-1" />
-                                Accept
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
+                        ))
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -189,18 +186,22 @@ const ArtistDashboard = () => {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3">
-                      {upcomingJobs.map((job) => (
-                        <div key={job.id} className="flex items-center justify-between p-3 border rounded-lg">
-                          <div>
-                            <h4 className="font-medium">{job.service}</h4>
-                            <p className="text-sm text-gray-600">{job.client} • {job.date}</p>
+                      {upcomingJobs.length === 0 ? (
+                        <p className="text-center text-gray-500 py-8">No upcoming jobs</p>
+                      ) : (
+                        upcomingJobs.map((job) => (
+                          <div key={job.id} className="flex items-center justify-between p-3 border rounded-lg">
+                            <div>
+                              <h4 className="font-medium">{job.serviceName}</h4>
+                              <p className="text-sm text-gray-600">{job.clientName} • {job.date}</p>
+                            </div>
+                            <div className="text-right">
+                              <p className="font-semibold">${job.price}</p>
+                              <Badge className="bg-green-100 text-green-800">Confirmed</Badge>
+                            </div>
                           </div>
-                          <div className="text-right">
-                            <p className="font-semibold">{job.price}</p>
-                            <Badge className="bg-green-100 text-green-800">Confirmed</Badge>
-                          </div>
-                        </div>
-                      ))}
+                        ))
+                      )}
                     </div>
                   </CardContent>
                 </Card>
