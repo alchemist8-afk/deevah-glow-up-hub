@@ -1,3 +1,4 @@
+
 import { Layout } from "@/components/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -19,12 +20,12 @@ const artistData = {
 };
 
 const ArtistDashboard = () => {
-  const { user } = useAuth();
-  const { getUserBookings, updateBookingStatus } = useBooking();
+  const { profile } = useAuth();
+  const { bookings, updateBookingStatus } = useBooking();
   const { toast } = useToast();
 
-  const pendingBookings = getUserBookings(user?.id || '', 'provider').filter(b => b.status === 'pending');
-  const upcomingJobs = getUserBookings(user?.id || '', 'provider').filter(b => b.status === 'accepted');
+  const pendingBookings = bookings.filter(b => b.status === 'pending');
+  const upcomingJobs = bookings.filter(b => b.status === 'accepted');
 
   const handleBookingAction = (bookingId: string, action: 'accept' | 'reject') => {
     updateBookingStatus(bookingId, action === 'accept' ? 'accepted' : 'rejected');
@@ -41,11 +42,11 @@ const ArtistDashboard = () => {
           <div className="flex items-center justify-between mb-8">
             <div className="flex items-center space-x-4">
               <Avatar className="w-16 h-16">
-                <AvatarImage src={user?.avatar} />
-                <AvatarFallback>{user?.name?.split(' ').map(n => n[0]).join('') || 'MJ'}</AvatarFallback>
+                <AvatarImage src={profile?.avatar_url} />
+                <AvatarFallback>{profile?.full_name?.split(' ').map(n => n[0]).join('') || 'MJ'}</AvatarFallback>
               </Avatar>
               <div>
-                <h1 className="text-3xl font-bold text-gray-900">Welcome back, {user?.name || artistData.name}!</h1>
+                <h1 className="text-3xl font-bold text-gray-900">Welcome back, {profile?.full_name || artistData.name}!</h1>
                 <p className="text-gray-600">Ready to create beautiful transformations today?</p>
               </div>
             </div>
@@ -134,24 +135,26 @@ const ArtistDashboard = () => {
                           <div key={booking.id} className="border rounded-lg p-4">
                             <div className="flex items-center justify-between mb-3">
                               <div>
-                                <h3 className="font-semibold text-lg">{booking.serviceName}</h3>
-                                <p className="text-gray-600">{booking.clientName}</p>
+                                <h3 className="font-semibold text-lg">Booking Request</h3>
+                                <p className="text-gray-600">Client ID: {booking.client_id}</p>
                               </div>
                               <div className="text-right">
-                                <p className="font-bold text-green-600">${booking.price}</p>
-                                <p className="text-sm text-gray-500">{booking.duration}</p>
+                                <p className="font-bold text-green-600">KSh {booking.total_amount}</p>
+                                <p className="text-sm text-gray-500">Service booking</p>
                               </div>
                             </div>
                             <div className="flex items-center justify-between">
                               <div className="flex items-center space-x-4 text-sm text-gray-600">
                                 <span className="flex items-center">
                                   <Calendar className="w-4 h-4 mr-1" />
-                                  {booking.date}
+                                  {new Date(booking.booking_date).toLocaleDateString()}
                                 </span>
-                                <span className="flex items-center">
-                                  <MapPin className="w-4 h-4 mr-1" />
-                                  {booking.location}
-                                </span>
+                                {booking.location && (
+                                  <span className="flex items-center">
+                                    <MapPin className="w-4 h-4 mr-1" />
+                                    {booking.location}
+                                  </span>
+                                )}
                               </div>
                               <div className="flex space-x-2">
                                 <Button 
@@ -192,11 +195,11 @@ const ArtistDashboard = () => {
                         upcomingJobs.map((job) => (
                           <div key={job.id} className="flex items-center justify-between p-3 border rounded-lg">
                             <div>
-                              <h4 className="font-medium">{job.serviceName}</h4>
-                              <p className="text-sm text-gray-600">{job.clientName} • {job.date}</p>
+                              <h4 className="font-medium">Confirmed Booking</h4>
+                              <p className="text-sm text-gray-600">Client: {job.client_id} • {new Date(job.booking_date).toLocaleDateString()}</p>
                             </div>
                             <div className="text-right">
-                              <p className="font-semibold">${job.price}</p>
+                              <p className="font-semibold">KSh {job.total_amount}</p>
                               <Badge className="bg-green-100 text-green-800">Confirmed</Badge>
                             </div>
                           </div>

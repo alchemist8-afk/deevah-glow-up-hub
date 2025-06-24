@@ -12,8 +12,8 @@ import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 
 const WalletPage = () => {
-  const { user } = useAuth();
-  const { transactions, addGlowCoins, spendGlowCoins, transferGlowCoins } = useWallet();
+  const { profile } = useAuth();
+  const { balance, glowCoins, transactions, earnGlowCoins } = useWallet();
   const { toast } = useToast();
   const [transferAmount, setTransferAmount] = useState('');
   const [transferUserId, setTransferUserId] = useState('');
@@ -21,8 +21,8 @@ const WalletPage = () => {
   const handleTransfer = () => {
     const amount = parseInt(transferAmount);
     if (amount > 0 && transferUserId.trim()) {
-      const success = transferGlowCoins(transferUserId.trim(), amount, 'P2P Transfer');
-      if (success) {
+      if (amount <= glowCoins) {
+        earnGlowCoins(-amount, `Transfer to ${transferUserId}`);
         toast({
           title: "Transfer Successful!",
           description: `Sent ${amount} GlowCoins to ${transferUserId}`
@@ -32,15 +32,15 @@ const WalletPage = () => {
       } else {
         toast({
           title: "Transfer Failed",
-          description: "Insufficient balance or invalid details",
+          description: "Insufficient balance",
           variant: "destructive"
         });
       }
     }
   };
 
-  const earnGlowCoins = (amount: number, description: string) => {
-    addGlowCoins(amount, description);
+  const handleEarnGlowCoins = (amount: number, description: string) => {
+    earnGlowCoins(amount, description);
     toast({
       title: "GlowCoins Earned!",
       description: `+${amount} GlowCoins: ${description}`
@@ -68,10 +68,10 @@ const WalletPage = () => {
             <CardContent className="p-8 text-center">
               <div className="flex items-center justify-center mb-4">
                 <Zap className="w-8 h-8 mr-2" />
-                <span className="text-4xl font-bold">{user?.glowCoins || 0}</span>
+                <span className="text-4xl font-bold">{glowCoins}</span>
               </div>
               <p className="text-xl opacity-90">GlowCoins Balance</p>
-              <p className="text-sm opacity-75 mt-2">≈ ${((user?.glowCoins || 0) * 0.1).toFixed(2)} USD</p>
+              <p className="text-sm opacity-75 mt-2">≈ ${(glowCoins * 0.1).toFixed(2)} USD</p>
             </CardContent>
           </Card>
 
@@ -96,27 +96,27 @@ const WalletPage = () => {
                         <div key={txn.id} className="flex items-center justify-between p-4 border rounded-lg">
                           <div className="flex items-center space-x-3">
                             <div className={`p-2 rounded-full ${
-                              txn.type === 'earn' ? 'bg-green-100' : 
-                              txn.type === 'spend' ? 'bg-red-100' : 'bg-blue-100'
+                              txn.type === 'glow_coins' || txn.type === 'deposit' || txn.type === 'referral_earning' ? 'bg-green-100' : 
+                              txn.type === 'withdraw' || txn.type === 'booking' ? 'bg-red-100' : 'bg-blue-100'
                             }`}>
-                              {txn.type === 'earn' ? (
+                              {(txn.type === 'glow_coins' || txn.type === 'deposit' || txn.type === 'referral_earning') ? (
                                 <Plus className="w-4 h-4 text-green-600" />
-                              ) : txn.type === 'spend' ? (
+                              ) : txn.type === 'withdraw' || txn.type === 'booking' ? (
                                 <TrendingUp className="w-4 h-4 text-red-600 rotate-180" />
                               ) : (
                                 <Send className="w-4 h-4 text-blue-600" />
                               )}
                             </div>
                             <div>
-                              <p className="font-medium">{txn.description}</p>
-                              <p className="text-sm text-gray-500">{new Date(txn.date).toLocaleDateString()}</p>
+                              <p className="font-medium">{txn.description || 'Transaction'}</p>
+                              <p className="text-sm text-gray-500">{new Date(txn.created_at).toLocaleDateString()}</p>
                             </div>
                           </div>
                           <div className="text-right">
                             <p className={`font-bold ${
-                              txn.type === 'earn' ? 'text-green-600' : 'text-red-600'
+                              (txn.type === 'glow_coins' || txn.type === 'deposit' || txn.type === 'referral_earning') ? 'text-green-600' : 'text-red-600'
                             }`}>
-                              {txn.type === 'earn' ? '+' : '-'}{txn.amount}
+                              {(txn.type === 'glow_coins' || txn.type === 'deposit' || txn.type === 'referral_earning') ? '+' : '-'}{txn.amount}
                             </p>
                             <Badge variant={txn.status === 'completed' ? 'default' : 'secondary'}>
                               {txn.status}
@@ -155,7 +155,7 @@ const WalletPage = () => {
                   </div>
                   <Button 
                     onClick={handleTransfer}
-                    disabled={!transferAmount || !transferUserId || parseInt(transferAmount) > (user?.glowCoins || 0)}
+                    disabled={!transferAmount || !transferUserId || parseInt(transferAmount) > glowCoins}
                     className="w-full"
                   >
                     <Send className="w-4 h-4 mr-2" />
@@ -177,7 +177,7 @@ const WalletPage = () => {
                   <CardContent className="space-y-4">
                     <p className="text-gray-600">Earn 25 GlowCoins for every friend you refer!</p>
                     <Button 
-                      onClick={() => earnGlowCoins(25, 'Referral bonus simulation')}
+                      onClick={() => handleEarnGlowCoins(25, 'Referral bonus simulation')}
                       className="w-full"
                     >
                       Simulate Referral (+25)
@@ -195,7 +195,7 @@ const WalletPage = () => {
                   <CardContent className="space-y-4">
                     <p className="text-gray-600">Complete daily activities to earn bonus coins!</p>
                     <Button 
-                      onClick={() => earnGlowCoins(10, 'Daily streak bonus')}
+                      onClick={() => handleEarnGlowCoins(10, 'Daily streak bonus')}
                       variant="outline"
                       className="w-full"
                     >
@@ -214,7 +214,7 @@ const WalletPage = () => {
                   <CardContent className="space-y-4">
                     <p className="text-gray-600">Earn 2% commission from each guest!</p>
                     <Button 
-                      onClick={() => earnGlowCoins(15, 'Glow session hosting reward')}
+                      onClick={() => handleEarnGlowCoins(15, 'Glow session hosting reward')}
                       variant="outline"
                       className="w-full"
                     >

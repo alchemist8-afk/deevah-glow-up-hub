@@ -11,13 +11,13 @@ import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 
 const ReferralPage = () => {
-  const { user } = useAuth();
+  const { profile } = useAuth();
   const { referrals, totalEarnings, addReferral, completeReferral } = useReferral();
   const { toast } = useToast();
   const [copied, setCopied] = useState(false);
   const [newReferralName, setNewReferralName] = useState('');
 
-  const referralLink = `https://deevah.app/join?ref=${user?.referralCode}`;
+  const referralLink = `https://deevah.app/join?ref=${profile?.id || 'user123'}`;
 
   const copyReferralLink = () => {
     navigator.clipboard.writeText(referralLink);

@@ -144,9 +144,9 @@ export function GlowFeedProvider({ children }: { children: ReactNode }) {
           user_id: user.id
         });
 
-      if (error) throw error;
+      if (error && error.code !== '23505') throw error; // Ignore duplicate key errors
 
-      // Update post likes count
+      // Update post likes count using RPC function
       await supabase.rpc('increment_likes', { post_id: postId });
 
       setPosts(prev => prev.map(post => 
@@ -171,7 +171,7 @@ export function GlowFeedProvider({ children }: { children: ReactNode }) {
 
       if (error) throw error;
 
-      // Update post likes count
+      // Update post likes count using RPC function
       await supabase.rpc('decrement_likes', { post_id: postId });
 
       setPosts(prev => prev.map(post => 

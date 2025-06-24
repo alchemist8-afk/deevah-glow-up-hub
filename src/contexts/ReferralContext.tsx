@@ -24,7 +24,7 @@ const ReferralContext = createContext<ReferralContextType | undefined>(undefined
 
 export function ReferralProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
-  const { addGlowCoins } = useWallet();
+  const { earnGlowCoins } = useWallet();
   
   const [referrals, setReferrals] = useState<Referral[]>([
     {
@@ -72,7 +72,7 @@ export function ReferralProvider({ children }: { children: React.ReactNode }) {
 
     const referral = referrals.find(r => r.id === referralId);
     if (referral) {
-      addGlowCoins(referral.rewardAmount, `Referral reward: ${referral.referredUserName}`);
+      earnGlowCoins(referral.rewardAmount, `Referral reward: ${referral.referredUserName}`);
     }
   };
 

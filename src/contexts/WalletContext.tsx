@@ -52,7 +52,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
       if (error) throw error;
 
-      setTransactions(prev => [data, ...prev]);
+      // Type assertion to ensure data matches our interface
+      const typedData = data as WalletTransaction;
+      setTransactions(prev => [typedData, ...prev]);
 
       // Update balance based on transaction type
       if (transactionData.type === 'deposit' && transactionData.status === 'completed') {
@@ -85,20 +87,23 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setTransactions(data || []);
+      
+      // Type assertion to ensure data matches our interface
+      const typedData = (data || []) as WalletTransaction[];
+      setTransactions(typedData);
 
       // Calculate balance from transactions
-      const totalDeposits = data?.filter(t => t.type === 'deposit' && t.status === 'completed')
-        .reduce((sum, t) => sum + t.amount, 0) || 0;
-      const totalWithdrawals = data?.filter(t => t.type === 'withdraw' && t.status === 'completed')
-        .reduce((sum, t) => sum + t.amount, 0) || 0;
-      const totalEarnings = data?.filter(t => t.type === 'referral_earning' && t.status === 'completed')
-        .reduce((sum, t) => sum + t.amount, 0) || 0;
+      const totalDeposits = typedData.filter(t => t.type === 'deposit' && t.status === 'completed')
+        .reduce((sum, t) => sum + t.amount, 0);
+      const totalWithdrawals = typedData.filter(t => t.type === 'withdraw' && t.status === 'completed')
+        .reduce((sum, t) => sum + t.amount, 0);
+      const totalEarnings = typedData.filter(t => t.type === 'referral_earning' && t.status === 'completed')
+        .reduce((sum, t) => sum + t.amount, 0);
 
       setBalance(totalDeposits - totalWithdrawals + totalEarnings);
 
-      const totalGlowCoins = data?.filter(t => t.type === 'glow_coins')
-        .reduce((sum, t) => sum + t.amount, 0) || 0;
+      const totalGlowCoins = typedData.filter(t => t.type === 'glow_coins')
+        .reduce((sum, t) => sum + t.amount, 0);
       setGlowCoins(50 + totalGlowCoins); // 50 is welcome bonus
 
     } catch (error) {

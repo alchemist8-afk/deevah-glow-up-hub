@@ -14,8 +14,8 @@ import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 
 const GlowFeedPage = () => {
-  const { addPost } = useGlowFeed();
-  const { user } = useAuth();
+  const { createPost } = useGlowFeed();
+  const { profile } = useAuth();
   const { toast } = useToast();
   const [newPost, setNewPost] = useState({
     image: '',
@@ -27,18 +27,14 @@ const GlowFeedPage = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   const handleSubmitPost = () => {
-    if (!user || !newPost.image || !newPost.caption) return;
+    if (!profile || !newPost.image || !newPost.caption) return;
 
-    addPost({
-      userId: user.id,
-      userName: user.name,
-      userAvatar: user.avatar || '',
-      image: newPost.image,
-      caption: newPost.caption,
-      serviceUsed: newPost.serviceUsed || undefined,
-      artistName: newPost.artistName || undefined,
-      isGroupSession: newPost.isGroupSession
-    });
+    createPost(
+      newPost.image,
+      newPost.caption,
+      newPost.serviceUsed || undefined,
+      newPost.artistName || undefined
+    );
 
     toast({
       title: "Post Shared!",
@@ -72,7 +68,7 @@ const GlowFeedPage = () => {
               <p className="text-xl text-gray-600">Share your beauty transformations with the community</p>
             </div>
             
-            {user && (
+            {profile && (
               <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                 <DialogTrigger asChild>
                   <Button className="bg-gradient-to-r from-purple-600 to-pink-600">
