@@ -81,19 +81,29 @@ export function BookingProvider({ children }: { children: ReactNode }) {
     if (!user) return { success: false, error: 'Not authenticated' };
 
     try {
+      const bookingToInsert = {
+        client_id: user.id,
+        service_id: serviceId,
+        booking_date: bookingData.booking_date || new Date().toISOString(),
+        total_amount: bookingData.total_amount || 0,
+        status: 'pending' as const,
+        provider_id: bookingData.provider_id,
+        location: bookingData.location,
+        notes: bookingData.notes,
+        mood: bookingData.mood,
+        is_group_session: bookingData.is_group_session || false,
+        max_guests: bookingData.max_guests
+      };
+
       const { data, error } = await supabase
         .from('bookings')
-        .insert({
-          client_id: user.id,
-          service_id: serviceId,
-          ...bookingData
-        })
+        .insert(bookingToInsert)
         .select()
         .single();
 
       if (error) throw error;
 
-      setBookings(prev => [data, ...prev]);
+      setBookings(prev => [data as Booking, ...prev]);
       
       toast({
         title: "Booking Created!",
@@ -158,7 +168,7 @@ export function BookingProvider({ children }: { children: ReactNode }) {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setBookings(data || []);
+      setBookings((data || []) as Booking[]);
     } catch (error) {
       console.error('Error fetching bookings:', error);
     }

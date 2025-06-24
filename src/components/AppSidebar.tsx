@@ -80,17 +80,17 @@ const userMenuItems = [
 export function AppSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, isAuthenticated, logout } = useAuth();
+  const { profile, isAuthenticated, signOut } = useAuth();
 
   const handleLogout = () => {
-    logout();
+    signOut();
     navigate('/');
   };
 
   const getDashboardLink = () => {
-    if (!user) return null;
+    if (!profile) return null;
     
-    switch (user.role) {
+    switch (profile.user_role) {
       case 'artist':
         return { url: '/artist-dashboard', label: 'Artist Dashboard', icon: Star };
       case 'business':
@@ -142,7 +142,7 @@ export function AppSidebar() {
         </SidebarGroup>
 
         {/* User Menu - Only show if authenticated */}
-        {isAuthenticated && user && (
+        {isAuthenticated && profile && (
           <SidebarGroup>
             <SidebarGroupLabel className="text-sm font-medium text-muted-foreground px-6">
               Your Account
@@ -150,7 +150,7 @@ export function AppSidebar() {
             <SidebarGroupContent className="px-3">
               <SidebarMenu>
                 {userMenuItems
-                  .filter(item => item.roles.includes(user.role))
+                  .filter(item => item.roles.includes(profile.user_role))
                   .map((item) => (
                     <SidebarMenuItem key={item.title}>
                       <SidebarMenuButton asChild className="w-full">
@@ -166,7 +166,7 @@ export function AppSidebar() {
                           </div>
                           {item.title === 'Wallet' && (
                             <Badge variant="secondary" className="text-xs">
-                              {user.glowCoins}
+                              0
                             </Badge>
                           )}
                         </Link>
@@ -197,24 +197,22 @@ export function AppSidebar() {
       </SidebarContent>
 
       <SidebarFooter className="p-6">
-        {isAuthenticated && user ? (
+        {isAuthenticated && profile ? (
           <div className="space-y-3">
             <div className="flex items-center space-x-3 p-3 bg-accent/50 rounded-lg">
               <Avatar className="w-8 h-8">
-                <AvatarImage src={user.avatar} />
+                <AvatarImage src={profile.avatar_url} />
                 <AvatarFallback>
-                  {user.name.split(' ').map(n => n[0]).join('')}
+                  {profile.full_name.split(' ').map(n => n[0]).join('')}
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1 min-w-0">
-                <p className="font-medium text-sm truncate">{user.name}</p>
+                <p className="font-medium text-sm truncate">{profile.full_name}</p>
                 <div className="flex items-center space-x-2">
-                  <p className="text-xs text-muted-foreground capitalize">{user.role}</p>
-                  {user.verified && (
-                    <Badge variant="secondary" className="text-xs px-1 py-0">
-                      ✓
-                    </Badge>
-                  )}
+                  <p className="text-xs text-muted-foreground capitalize">{profile.user_role}</p>
+                  <Badge variant="secondary" className="text-xs px-1 py-0">
+                    ✓
+                  </Badge>
                 </div>
               </div>
             </div>

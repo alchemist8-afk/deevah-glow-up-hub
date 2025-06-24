@@ -25,8 +25,8 @@ interface BookingModalProps {
 }
 
 export function BookingModal({ isOpen, onClose, service }: BookingModalProps) {
-  const { user } = useAuth();
-  const { addBooking } = useBooking();
+  const { profile } = useAuth();
+  const { createBooking } = useBooking();
   const { toast } = useToast();
   const [bookingData, setBookingData] = useState({
     date: '',
@@ -35,32 +35,25 @@ export function BookingModal({ isOpen, onClose, service }: BookingModalProps) {
     notes: ''
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!user) return;
+    if (!profile) return;
 
-    addBooking({
-      clientId: user.id,
-      clientName: user.name,
-      providerId: service.providerId,
-      providerName: service.provider,
-      serviceType: service.type,
-      serviceName: service.name,
-      price: service.price,
-      date: `${bookingData.date} at ${bookingData.time}`,
-      status: 'pending',
-      duration: service.duration,
-      location: bookingData.location
+    const bookingDateTime = `${bookingData.date}T${bookingData.time}:00.000Z`;
+
+    const result = await createBooking(service.id, {
+      provider_id: service.providerId,
+      booking_date: bookingDateTime,
+      total_amount: service.price,
+      location: bookingData.location,
+      notes: bookingData.notes
     });
 
-    toast({
-      title: "Booking Submitted!",
-      description: `Your ${service.name} booking has been sent to ${service.provider}.`
-    });
-
-    onClose();
-    setBookingData({ date: '', time: '', location: '', notes: '' });
+    if (result.success) {
+      onClose();
+      setBookingData({ date: '', time: '', location: '', notes: '' });
+    }
   };
 
   return (

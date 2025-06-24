@@ -7,17 +7,21 @@ import { Badge } from '@/components/ui/badge';
 import { Heart, MessageCircle, Share, Users } from 'lucide-react';
 import { useGlowFeed } from '@/contexts/GlowFeedContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 export function GlowFeed() {
-  const { posts, likePost, addComment } = useGlowFeed();
-  const { user } = useAuth();
+  const { posts, likePost, addComment, fetchPosts } = useGlowFeed();
+  const { profile } = useAuth();
   const [commentTexts, setCommentTexts] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    fetchPosts();
+  }, []);
 
   const handleAddComment = (postId: string) => {
     const text = commentTexts[postId];
-    if (text?.trim() && user) {
-      addComment(postId, text.trim(), user.name);
+    if (text?.trim() && profile) {
+      addComment(postId, text.trim());
       setCommentTexts(prev => ({ ...prev, [postId]: '' }));
     }
   };
@@ -38,15 +42,15 @@ export function GlowFeed() {
                 <div className="p-4 flex items-center justify-between">
                   <div className="flex items-center space-x-3">
                     <Avatar>
-                      <AvatarImage src={post.userAvatar} />
-                      <AvatarFallback>{post.userName[0]}</AvatarFallback>
+                      <AvatarImage src={post.profiles?.avatar_url} />
+                      <AvatarFallback>{post.profiles?.full_name?.[0] || 'U'}</AvatarFallback>
                     </Avatar>
                     <div>
-                      <h4 className="font-semibold">{post.userName}</h4>
-                      <p className="text-sm text-gray-500">{post.timestamp}</p>
+                      <h4 className="font-semibold">{post.profiles?.full_name || 'User'}</h4>
+                      <p className="text-sm text-gray-500">{new Date(post.created_at).toLocaleDateString()}</p>
                     </div>
                   </div>
-                  {post.isGroupSession && (
+                  {post.is_group_session && (
                     <Badge variant="secondary" className="bg-purple-100 text-purple-800">
                       <Users className="w-3 h-3 mr-1" />
                       Glow Together
@@ -57,20 +61,20 @@ export function GlowFeed() {
                 {/* Post Image */}
                 <div className="relative">
                   <img 
-                    src={post.image} 
+                    src={post.image_url} 
                     alt="Glow transformation"
                     className="w-full h-80 object-cover"
                   />
-                  {post.serviceUsed && (
+                  {post.service_used && (
                     <div className="absolute bottom-4 left-4 bg-black/70 text-white px-3 py-1 rounded-full text-sm">
-                      {post.serviceUsed} by {post.artistName}
+                      {post.service_used} {post.artist_name && `by ${post.artist_name}`}
                     </div>
                   )}
                 </div>
 
                 {/* Post Content */}
                 <div className="p-4">
-                  <p className="text-gray-900 mb-3">{post.caption}</p>
+                  {post.caption && <p className="text-gray-900 mb-3">{post.caption}</p>}
                   
                   {/* Actions */}
                   <div className="flex items-center space-x-4 mb-4">
@@ -81,11 +85,11 @@ export function GlowFeed() {
                       className={post.isLiked ? 'text-red-500' : ''}
                     >
                       <Heart className={`w-4 h-4 mr-1 ${post.isLiked ? 'fill-current' : ''}`} />
-                      {post.likes}
+                      {post.likes_count}
                     </Button>
                     <Button variant="ghost" size="sm">
                       <MessageCircle className="w-4 h-4 mr-1" />
-                      {post.comments.length}
+                      0
                     </Button>
                     <Button variant="ghost" size="sm">
                       <Share className="w-4 h-4 mr-1" />
@@ -93,20 +97,8 @@ export function GlowFeed() {
                     </Button>
                   </div>
 
-                  {/* Comments */}
-                  {post.comments.length > 0 && (
-                    <div className="space-y-2 mb-4">
-                      {post.comments.map((comment) => (
-                        <div key={comment.id} className="flex space-x-2 text-sm">
-                          <span className="font-semibold">{comment.userName}</span>
-                          <span className="text-gray-700">{comment.text}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
                   {/* Add Comment */}
-                  {user && (
+                  {profile && (
                     <div className="flex space-x-2">
                       <Input
                         placeholder="Add a comment..."
