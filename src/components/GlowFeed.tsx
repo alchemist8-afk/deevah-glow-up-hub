@@ -1,111 +1,132 @@
 
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Heart, MessageSquare, Share } from "lucide-react";
-
-const glowPosts = [
-  {
-    id: 1,
-    artist: "Sarah Chen",
-    image: "https://images.unsplash.com/photo-1649972904349-6e44c42644a7",
-    caption: "Soft glam for a beautiful bride ✨ #MakeupArtist #BridalMakeup",
-    likes: 124,
-    comments: 18,
-    category: "Makeup"
-  },
-  {
-    id: 2,
-    artist: "Marcus Williams",
-    image: "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158",
-    caption: "Fresh fade on point! 💯 #BarberLife #FreshCut",
-    likes: 89,
-    comments: 12,
-    category: "Barber"
-  },
-  {
-    id: 3,
-    artist: "Zara Ahmed",
-    image: "https://images.unsplash.com/photo-1506744038136-46273834b3fb",
-    caption: "Volume lashes that speak volumes 👁️ #LashExtensions #BeautyGoals",
-    likes: 156,
-    comments: 24,
-    category: "Lashes"
-  },
-  {
-    id: 4,
-    artist: "David Kim",
-    image: "https://images.unsplash.com/photo-1582562124811-c09040d0a901",
-    caption: "Transformation Tuesday! From damaged to gorgeous 🌟 #HairTransformation",
-    likes: 203,
-    comments: 31,
-    category: "Hair"
-  }
-];
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { Heart, MessageCircle, Share, Users } from 'lucide-react';
+import { useGlowFeed } from '@/contexts/GlowFeedContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { useState } from 'react';
 
 export function GlowFeed() {
+  const { posts, likePost, addComment } = useGlowFeed();
+  const { user } = useAuth();
+  const [commentTexts, setCommentTexts] = useState<Record<string, string>>({});
+
+  const handleAddComment = (postId: string) => {
+    const text = commentTexts[postId];
+    if (text?.trim() && user) {
+      addComment(postId, text.trim(), user.name);
+      setCommentTexts(prev => ({ ...prev, [postId]: '' }));
+    }
+  };
+
   return (
-    <section className="py-16 px-6 bg-gradient-to-br from-purple-50 to-pink-50">
-      <div className="max-w-7xl mx-auto">
+    <section className="py-16 px-6 bg-gray-50">
+      <div className="max-w-4xl mx-auto">
         <div className="text-center mb-12">
-          <h2 className="text-4xl font-bold mb-4 gradient-text">Glow Feed</h2>
-          <p className="text-xl text-muted-foreground">
-            See the latest beauty transformations from our talented artists
-          </p>
+          <h2 className="text-4xl font-bold text-gray-900 mb-4">Glow Feed</h2>
+          <p className="text-xl text-gray-600">See the latest transformations from our community</p>
         </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {glowPosts.map((post, index) => (
-            <Card 
-              key={post.id} 
-              className="group cursor-pointer hover:shadow-lg transition-all duration-300 overflow-hidden"
-              style={{ animationDelay: `${index * 100}ms` }}
-            >
-              <div className="relative">
-                <img 
-                  src={post.image} 
-                  alt={`Post by ${post.artist}`}
-                  className="w-full h-64 object-cover group-hover:scale-105 transition-transform duration-300"
-                />
-                <div className="absolute top-3 left-3">
-                  <span className="bg-deevah-purple text-white px-2 py-1 rounded-full text-xs font-medium">
-                    {post.category}
-                  </span>
-                </div>
-              </div>
-              
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <h4 className="font-semibold text-sm">{post.artist}</h4>
-                </div>
-                
-                <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
-                  {post.caption}
-                </p>
-                
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-4">
-                    <button className="flex items-center space-x-1 text-sm text-muted-foreground hover:text-red-500 transition-colors">
-                      <Heart className="w-4 h-4" />
-                      <span>{post.likes}</span>
-                    </button>
-                    <button className="flex items-center space-x-1 text-sm text-muted-foreground hover:text-blue-500 transition-colors">
-                      <MessageSquare className="w-4 h-4" />
-                      <span>{post.comments}</span>
-                    </button>
+
+        <div className="space-y-6">
+          {posts.map((post) => (
+            <Card key={post.id} className="overflow-hidden">
+              <CardContent className="p-0">
+                {/* Post Header */}
+                <div className="p-4 flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <Avatar>
+                      <AvatarImage src={post.userAvatar} />
+                      <AvatarFallback>{post.userName[0]}</AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <h4 className="font-semibold">{post.userName}</h4>
+                      <p className="text-sm text-gray-500">{post.timestamp}</p>
+                    </div>
                   </div>
-                  <button className="text-muted-foreground hover:text-deevah-purple transition-colors">
-                    <Share className="w-4 h-4" />
-                  </button>
+                  {post.isGroupSession && (
+                    <Badge variant="secondary" className="bg-purple-100 text-purple-800">
+                      <Users className="w-3 h-3 mr-1" />
+                      Glow Together
+                    </Badge>
+                  )}
+                </div>
+
+                {/* Post Image */}
+                <div className="relative">
+                  <img 
+                    src={post.image} 
+                    alt="Glow transformation"
+                    className="w-full h-80 object-cover"
+                  />
+                  {post.serviceUsed && (
+                    <div className="absolute bottom-4 left-4 bg-black/70 text-white px-3 py-1 rounded-full text-sm">
+                      {post.serviceUsed} by {post.artistName}
+                    </div>
+                  )}
+                </div>
+
+                {/* Post Content */}
+                <div className="p-4">
+                  <p className="text-gray-900 mb-3">{post.caption}</p>
+                  
+                  {/* Actions */}
+                  <div className="flex items-center space-x-4 mb-4">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => likePost(post.id)}
+                      className={post.isLiked ? 'text-red-500' : ''}
+                    >
+                      <Heart className={`w-4 h-4 mr-1 ${post.isLiked ? 'fill-current' : ''}`} />
+                      {post.likes}
+                    </Button>
+                    <Button variant="ghost" size="sm">
+                      <MessageCircle className="w-4 h-4 mr-1" />
+                      {post.comments.length}
+                    </Button>
+                    <Button variant="ghost" size="sm">
+                      <Share className="w-4 h-4 mr-1" />
+                      Share
+                    </Button>
+                  </div>
+
+                  {/* Comments */}
+                  {post.comments.length > 0 && (
+                    <div className="space-y-2 mb-4">
+                      {post.comments.map((comment) => (
+                        <div key={comment.id} className="flex space-x-2 text-sm">
+                          <span className="font-semibold">{comment.userName}</span>
+                          <span className="text-gray-700">{comment.text}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Add Comment */}
+                  {user && (
+                    <div className="flex space-x-2">
+                      <Input
+                        placeholder="Add a comment..."
+                        value={commentTexts[post.id] || ''}
+                        onChange={(e) => setCommentTexts(prev => ({ ...prev, [post.id]: e.target.value }))}
+                        onKeyPress={(e) => e.key === 'Enter' && handleAddComment(post.id)}
+                      />
+                      <Button 
+                        size="sm" 
+                        onClick={() => handleAddComment(post.id)}
+                        disabled={!commentTexts[post.id]?.trim()}
+                      >
+                        Post
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
           ))}
-        </div>
-        
-        <div className="text-center mt-12">
-          <Button className="bg-gradient-deevah hover:opacity-90 transition-opacity px-8 py-3">
-            View More Transformations
-          </Button>
         </div>
       </div>
     </section>

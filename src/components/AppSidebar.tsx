@@ -1,5 +1,5 @@
 
-import { Calendar, Home, Scissors, ShoppingBag, Gamepad2, UtensilsCrossed, LogIn, Star, LogOut, User, Settings } from "lucide-react";
+import { Calendar, Home, Scissors, ShoppingBag, Gamepad2, UtensilsCrossed, LogIn, Star, LogOut, User, Settings, Wallet, Share2, Camera, Users, Truck } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
 const menuItems = [
   {
@@ -27,6 +28,12 @@ const menuItems = [
     title: "Services",
     url: "/services",
     icon: Star,
+    subItems: [
+      { title: "Braids", url: "/braids" },
+      { title: "Nails", url: "/nails" },
+      { title: "Massage", url: "/massage" },
+      { title: "Dreadlocks", url: "/dreadlocks" }
+    ]
   },
   {
     title: "Products",
@@ -48,6 +55,26 @@ const menuItems = [
     url: "/cuts",
     icon: Scissors,
   },
+  {
+    title: "Glow Feed",
+    url: "/glow-feed",
+    icon: Camera,
+  }
+];
+
+const userMenuItems = [
+  {
+    title: "Wallet",
+    url: "/wallet",
+    icon: Wallet,
+    roles: ['client', 'artist', 'business', 'transport']
+  },
+  {
+    title: "Referrals",
+    url: "/referrals",
+    icon: Share2,
+    roles: ['client', 'artist', 'business', 'transport']
+  }
 ];
 
 export function AppSidebar() {
@@ -65,9 +92,11 @@ export function AppSidebar() {
     
     switch (user.role) {
       case 'artist':
-        return { url: '/artist-dashboard', label: 'Artist Dashboard' };
+        return { url: '/artist-dashboard', label: 'Artist Dashboard', icon: Star };
       case 'business':
-        return { url: '/business', label: 'Business Dashboard' };
+        return { url: '/business', label: 'Business Dashboard', icon: Settings };
+      case 'transport':
+        return { url: '/transport-dashboard', label: 'Transport Portal', icon: Truck };
       default:
         return null;
     }
@@ -89,7 +118,7 @@ export function AppSidebar() {
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel className="text-sm font-medium text-muted-foreground px-6">
-            Navigation
+            Explore
           </SidebarGroupLabel>
           <SidebarGroupContent className="px-3">
             <SidebarMenu>
@@ -108,26 +137,63 @@ export function AppSidebar() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
-              
-              {/* Dashboard link for logged-in artists/business owners */}
-              {dashboardLink && (
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild className="w-full">
-                    <Link 
-                      to={dashboardLink.url}
-                      className={`flex items-center space-x-3 px-3 py-2 rounded-lg hover:bg-accent transition-colors ${
-                        location.pathname === dashboardLink.url ? 'bg-accent text-accent-foreground' : ''
-                      }`}
-                    >
-                      <Settings className="w-5 h-5" />
-                      <span>{dashboardLink.label}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              )}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        {/* User Menu - Only show if authenticated */}
+        {isAuthenticated && user && (
+          <SidebarGroup>
+            <SidebarGroupLabel className="text-sm font-medium text-muted-foreground px-6">
+              Your Account
+            </SidebarGroupLabel>
+            <SidebarGroupContent className="px-3">
+              <SidebarMenu>
+                {userMenuItems
+                  .filter(item => item.roles.includes(user.role))
+                  .map((item) => (
+                    <SidebarMenuItem key={item.title}>
+                      <SidebarMenuButton asChild className="w-full">
+                        <Link 
+                          to={item.url}
+                          className={`flex items-center justify-between px-3 py-2 rounded-lg hover:bg-accent transition-colors ${
+                            location.pathname === item.url ? 'bg-accent text-accent-foreground' : ''
+                          }`}
+                        >
+                          <div className="flex items-center space-x-3">
+                            <item.icon className="w-5 h-5" />
+                            <span>{item.title}</span>
+                          </div>
+                          {item.title === 'Wallet' && (
+                            <Badge variant="secondary" className="text-xs">
+                              {user.glowCoins}
+                            </Badge>
+                          )}
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                
+                {/* Dashboard link for logged-in artists/business owners */}
+                {dashboardLink && (
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild className="w-full">
+                      <Link 
+                        to={dashboardLink.url}
+                        className={`flex items-center space-x-3 px-3 py-2 rounded-lg hover:bg-accent transition-colors ${
+                          location.pathname === dashboardLink.url ? 'bg-accent text-accent-foreground' : ''
+                        }`}
+                      >
+                        <dashboardLink.icon className="w-5 h-5" />
+                        <span>{dashboardLink.label}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
       </SidebarContent>
 
       <SidebarFooter className="p-6">
@@ -142,7 +208,14 @@ export function AppSidebar() {
               </Avatar>
               <div className="flex-1 min-w-0">
                 <p className="font-medium text-sm truncate">{user.name}</p>
-                <p className="text-xs text-muted-foreground capitalize">{user.role}</p>
+                <div className="flex items-center space-x-2">
+                  <p className="text-xs text-muted-foreground capitalize">{user.role}</p>
+                  {user.verified && (
+                    <Badge variant="secondary" className="text-xs px-1 py-0">
+                      ✓
+                    </Badge>
+                  )}
+                </div>
               </div>
             </div>
             <Button 
