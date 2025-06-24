@@ -146,8 +146,11 @@ export function GlowFeedProvider({ children }: { children: ReactNode }) {
 
       if (error && error.code !== '23505') throw error; // Ignore duplicate key errors
 
-      // Update post likes count using RPC function
-      await supabase.rpc('increment_likes', { post_id: postId });
+      // Update post likes count using direct SQL
+      await supabase
+        .from('glow_posts')
+        .update({ likes_count: supabase.raw('likes_count + 1') })
+        .eq('id', postId);
 
       setPosts(prev => prev.map(post => 
         post.id === postId 
@@ -171,8 +174,11 @@ export function GlowFeedProvider({ children }: { children: ReactNode }) {
 
       if (error) throw error;
 
-      // Update post likes count using RPC function
-      await supabase.rpc('decrement_likes', { post_id: postId });
+      // Update post likes count using direct SQL
+      await supabase
+        .from('glow_posts')
+        .update({ likes_count: supabase.raw('GREATEST(likes_count - 1, 0)') })
+        .eq('id', postId);
 
       setPosts(prev => prev.map(post => 
         post.id === postId 
