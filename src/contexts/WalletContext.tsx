@@ -1,94 +1,181 @@
 
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, ReactNode } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './AuthContext';
+import { useToast } from '@/hooks/use-toast';
 
-export interface Transaction {
+export interface WalletTransaction {
   id: string;
-  type: 'earn' | 'spend' | 'transfer_in' | 'transfer_out';
+  user_id: string;
+  type: 'deposit' | 'withdraw' | 'booking' | 'referral_earning' | 'glow_coins';
   amount: number;
-  description: string;
-  date: string;
-  status: 'completed' | 'pending' | 'failed';
+  method?: string;
+  status: 'pending' | 'completed' | 'failed';
+  description?: string;
+  created_at: string;
 }
 
 interface WalletContextType {
-  transactions: Transaction[];
-  addGlowCoins: (amount: number, description: string) => void;
-  spendGlowCoins: (amount: number, description: string) => boolean;
-  transferGlowCoins: (toUserId: string, amount: number, description: string) => boolean;
+  balance: number;
+  glowCoins: number;
+  transactions: WalletTransaction[];
+  isLoading: boolean;
+  addTransaction: (transaction: Omit<WalletTransaction, 'id' | 'user_id' | 'created_at'>) => Promise<void>;
+  fetchTransactions: () => Promise<void>;
+  depositFunds: (amount: number, method: string) => Promise<{ success: boolean }>;
+  withdrawFunds: (amount: number, method: string) => Promise<{ success: boolean }>;
+  earnGlowCoins: (amount: number, description: string) => Promise<void>;
 }
 
 const WalletContext = createContext<WalletContextType | undefined>(undefined);
 
-export function WalletProvider({ children }: { children: React.ReactNode }) {
-  const { user, updateUser } = useAuth();
-  const [transactions, setTransactions] = useState<Transaction[]>([
-    {
-      id: '1',
-      type: 'earn',
-      amount: 50,
-      description: 'Welcome bonus',
-      date: new Date().toISOString(),
-      status: 'completed'
-    }
-  ]);
+export function WalletProvider({ children }: { children: ReactNode }) {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [balance, setBalance] = useState(0);
+  const [glowCoins, setGlowCoins] = useState(50); // Welcome bonus
+  const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const addGlowCoins = (amount: number, description: string) => {
+  const addTransaction = async (transactionData: Omit<WalletTransaction, 'id' | 'user_id' | 'created_at'>) => {
     if (!user) return;
 
-    const newTransaction: Transaction = {
-      id: Date.now().toString(),
-      type: 'earn',
-      amount,
-      description,
-      date: new Date().toISOString(),
-      status: 'completed'
-    };
+    try {
+      const { data, error } = await supabase
+        .from('wallet_transactions')
+        .insert({
+          user_id: user.id,
+          ...transactionData
+        })
+        .select()
+        .single();
 
-    setTransactions(prev => [newTransaction, ...prev]);
-    updateUser({ glowCoins: (user.glowCoins || 0) + amount });
+      if (error) throw error;
+
+      setTransactions(prev => [data, ...prev]);
+
+      // Update balance based on transaction type
+      if (transactionData.type === 'deposit' && transactionData.status === 'completed') {
+        setBalance(prev => prev + transactionData.amount);
+      } else if (transactionData.type === 'withdraw' && transactionData.status === 'completed') {
+        setBalance(prev => prev - transactionData.amount);
+      } else if (transactionData.type === 'glow_coins') {
+        setGlowCoins(prev => prev + transactionData.amount);
+      }
+
+    } catch (error) {
+      console.error('Error adding transaction:', error);
+      toast({
+        title: "Transaction Failed",
+        description: "Failed to process transaction",
+        variant: "destructive"
+      });
+    }
   };
 
-  const spendGlowCoins = (amount: number, description: string): boolean => {
-    if (!user || (user.glowCoins || 0) < amount) return false;
+  const fetchTransactions = async () => {
+    if (!user) return;
 
-    const newTransaction: Transaction = {
-      id: Date.now().toString(),
-      type: 'spend',
-      amount,
-      description,
-      date: new Date().toISOString(),
-      status: 'completed'
-    };
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('wallet_transactions')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
 
-    setTransactions(prev => [newTransaction, ...prev]);
-    updateUser({ glowCoins: (user.glowCoins || 0) - amount });
-    return true;
+      if (error) throw error;
+      setTransactions(data || []);
+
+      // Calculate balance from transactions
+      const totalDeposits = data?.filter(t => t.type === 'deposit' && t.status === 'completed')
+        .reduce((sum, t) => sum + t.amount, 0) || 0;
+      const totalWithdrawals = data?.filter(t => t.type === 'withdraw' && t.status === 'completed')
+        .reduce((sum, t) => sum + t.amount, 0) || 0;
+      const totalEarnings = data?.filter(t => t.type === 'referral_earning' && t.status === 'completed')
+        .reduce((sum, t) => sum + t.amount, 0) || 0;
+
+      setBalance(totalDeposits - totalWithdrawals + totalEarnings);
+
+      const totalGlowCoins = data?.filter(t => t.type === 'glow_coins')
+        .reduce((sum, t) => sum + t.amount, 0) || 0;
+      setGlowCoins(50 + totalGlowCoins); // 50 is welcome bonus
+
+    } catch (error) {
+      console.error('Error fetching transactions:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const transferGlowCoins = (toUserId: string, amount: number, description: string): boolean => {
-    if (!user || (user.glowCoins || 0) < amount) return false;
-
-    const outTransaction: Transaction = {
-      id: Date.now().toString(),
-      type: 'transfer_out',
+  const depositFunds = async (amount: number, method: string) => {
+    await addTransaction({
+      type: 'deposit',
       amount,
-      description: `Transfer to ${toUserId}: ${description}`,
-      date: new Date().toISOString(),
-      status: 'completed'
-    };
+      method,
+      status: 'completed', // Simulating instant completion
+      description: `Deposit via ${method}`
+    });
 
-    setTransactions(prev => [outTransaction, ...prev]);
-    updateUser({ glowCoins: (user.glowCoins || 0) - amount });
-    return true;
+    toast({
+      title: "Deposit Successful!",
+      description: `KSh ${amount} has been added to your wallet`
+    });
+
+    return { success: true };
+  };
+
+  const withdrawFunds = async (amount: number, method: string) => {
+    if (balance < amount) {
+      toast({
+        title: "Insufficient Funds",
+        description: "You don't have enough balance for this withdrawal",
+        variant: "destructive"
+      });
+      return { success: false };
+    }
+
+    await addTransaction({
+      type: 'withdraw',
+      amount,
+      method,
+      status: 'completed',
+      description: `Withdrawal via ${method}`
+    });
+
+    toast({
+      title: "Withdrawal Successful!",
+      description: `KSh ${amount} has been withdrawn from your wallet`
+    });
+
+    return { success: true };
+  };
+
+  const earnGlowCoins = async (amount: number, description: string) => {
+    await addTransaction({
+      type: 'glow_coins',
+      amount,
+      status: 'completed',
+      description
+    });
+
+    toast({
+      title: "GlowCoins Earned! ✨",
+      description: `You earned ${amount} GlowCoins: ${description}`
+    });
   };
 
   return (
     <WalletContext.Provider value={{
+      balance,
+      glowCoins,
       transactions,
-      addGlowCoins,
-      spendGlowCoins,
-      transferGlowCoins
+      isLoading,
+      addTransaction,
+      fetchTransactions,
+      depositFunds,
+      withdrawFunds,
+      earnGlowCoins
     }}>
       {children}
     </WalletContext.Provider>

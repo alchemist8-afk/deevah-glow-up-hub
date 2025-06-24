@@ -1,128 +1,246 @@
 
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, ReactNode } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from './AuthContext';
+import { useToast } from '@/hooks/use-toast';
 
 export interface GlowPost {
   id: string;
-  userId: string;
-  userName: string;
-  userAvatar: string;
-  image: string;
-  caption: string;
-  serviceUsed?: string;
-  artistName?: string;
-  likes: number;
-  isLiked: boolean;
-  comments: Comment[];
-  timestamp: string;
-  isGroupSession?: boolean;
+  user_id: string;
+  image_url: string;
+  caption?: string;
+  service_used?: string;
+  artist_name?: string;
+  likes_count: number;
+  is_group_session: boolean;
+  created_at: string;
+  profiles?: {
+    full_name: string;
+    avatar_url?: string;
+  };
+  isLiked?: boolean;
 }
 
-export interface Comment {
+export interface PostComment {
   id: string;
-  userId: string;
-  userName: string;
-  text: string;
-  timestamp: string;
+  post_id: string;
+  user_id: string;
+  comment_text: string;
+  created_at: string;
+  profiles?: {
+    full_name: string;
+    avatar_url?: string;
+  };
 }
 
 interface GlowFeedContextType {
   posts: GlowPost[];
-  addPost: (post: Omit<GlowPost, 'id' | 'likes' | 'isLiked' | 'comments' | 'timestamp'>) => void;
-  likePost: (postId: string) => void;
-  addComment: (postId: string, text: string, userName: string) => void;
+  isLoading: boolean;
+  fetchPosts: () => Promise<void>;
+  createPost: (imageUrl: string, caption?: string, serviceUsed?: string, artistName?: string) => Promise<void>;
+  likePost: (postId: string) => Promise<void>;
+  unlikePost: (postId: string) => Promise<void>;
+  addComment: (postId: string, commentText: string) => Promise<void>;
+  fetchComments: (postId: string) => Promise<PostComment[]>;
 }
 
 const GlowFeedContext = createContext<GlowFeedContextType | undefined>(undefined);
 
-export function GlowFeedProvider({ children }: { children: React.ReactNode }) {
-  const [posts, setPosts] = useState<GlowPost[]>([
-    {
-      id: '1',
-      userId: 'user1',
-      userName: 'Zara M.',
-      userAvatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b739',
-      image: 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e',
-      caption: 'Absolutely loving these goddess braids! ✨ Perfect for the weekend vibes',
-      serviceUsed: 'Goddess Braids',
-      artistName: 'Maya Styles',
-      likes: 47,
-      isLiked: false,
-      comments: [
-        {
-          id: 'c1',
-          userId: 'user2',
-          userName: 'Amina',
-          text: 'Girl, you look stunning! 🔥',
-          timestamp: '2 hours ago'
-        }
-      ],
-      timestamp: '3 hours ago',
-      isGroupSession: false
-    },
-    {
-      id: '2',
-      userId: 'user3',
-      userName: 'Keisha B.',
-      userAvatar: 'https://images.unsplash.com/photo-1531123897727-8f129e1688ce',
-      image: 'https://images.unsplash.com/photo-1487412947147-5cebf100ffc2',
-      caption: 'Glow Together session was amazing! Best spa day with my girls 💕',
-      serviceUsed: 'Full Glow Package',
-      artistName: 'Golden Beauty Team',
-      likes: 23,
-      isLiked: true,
-      comments: [],
-      timestamp: '5 hours ago',
-      isGroupSession: true
+export function GlowFeedProvider({ children }: { children: ReactNode }) {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [posts, setPosts] = useState<GlowPost[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const fetchPosts = async () => {
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('glow_posts')
+        .select(`
+          *,
+          profiles(full_name, avatar_url)
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      // Check which posts are liked by current user
+      if (user && data) {
+        const { data: likes } = await supabase
+          .from('post_likes')
+          .select('post_id')
+          .eq('user_id', user.id);
+
+        const likedPostIds = new Set(likes?.map(like => like.post_id) || []);
+        
+        const postsWithLikes = data.map(post => ({
+          ...post,
+          isLiked: likedPostIds.has(post.id)
+        }));
+
+        setPosts(postsWithLikes);
+      } else {
+        setPosts(data || []);
+      }
+    } catch (error) {
+      console.error('Error fetching posts:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load posts",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
     }
-  ]);
-
-  const addPost = (post: Omit<GlowPost, 'id' | 'likes' | 'isLiked' | 'comments' | 'timestamp'>) => {
-    const newPost: GlowPost = {
-      ...post,
-      id: Date.now().toString(),
-      likes: 0,
-      isLiked: false,
-      comments: [],
-      timestamp: 'Just now'
-    };
-
-    setPosts(prev => [newPost, ...prev]);
   };
 
-  const likePost = (postId: string) => {
-    setPosts(prev => prev.map(post => 
-      post.id === postId 
-        ? { 
-            ...post, 
-            likes: post.isLiked ? post.likes - 1 : post.likes + 1,
-            isLiked: !post.isLiked 
-          }
-        : post
-    ));
+  const createPost = async (imageUrl: string, caption?: string, serviceUsed?: string, artistName?: string) => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('glow_posts')
+        .insert({
+          user_id: user.id,
+          image_url: imageUrl,
+          caption,
+          service_used: serviceUsed,
+          artist_name: artistName,
+          is_group_session: false
+        })
+        .select(`
+          *,
+          profiles(full_name, avatar_url)
+        `)
+        .single();
+
+      if (error) throw error;
+
+      setPosts(prev => [data, ...prev]);
+      
+      toast({
+        title: "Post Created! ✨",
+        description: "Your glow moment has been shared"
+      });
+    } catch (error) {
+      console.error('Error creating post:', error);
+      toast({
+        title: "Failed to post",
+        description: "Could not create your post",
+        variant: "destructive"
+      });
+    }
   };
 
-  const addComment = (postId: string, text: string, userName: string) => {
-    const newComment: Comment = {
-      id: Date.now().toString(),
-      userId: Date.now().toString(),
-      userName,
-      text,
-      timestamp: 'Just now'
-    };
+  const likePost = async (postId: string) => {
+    if (!user) return;
 
-    setPosts(prev => prev.map(post => 
-      post.id === postId 
-        ? { ...post, comments: [...post.comments, newComment] }
-        : post
-    ));
+    try {
+      const { error } = await supabase
+        .from('post_likes')
+        .insert({
+          post_id: postId,
+          user_id: user.id
+        });
+
+      if (error) throw error;
+
+      // Update post likes count
+      await supabase.rpc('increment_likes', { post_id: postId });
+
+      setPosts(prev => prev.map(post => 
+        post.id === postId 
+          ? { ...post, likes_count: post.likes_count + 1, isLiked: true }
+          : post
+      ));
+    } catch (error) {
+      console.error('Error liking post:', error);
+    }
+  };
+
+  const unlikePost = async (postId: string) => {
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from('post_likes')
+        .delete()
+        .eq('post_id', postId)
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      // Update post likes count
+      await supabase.rpc('decrement_likes', { post_id: postId });
+
+      setPosts(prev => prev.map(post => 
+        post.id === postId 
+          ? { ...post, likes_count: Math.max(0, post.likes_count - 1), isLiked: false }
+          : post
+      ));
+    } catch (error) {
+      console.error('Error unliking post:', error);
+    }
+  };
+
+  const addComment = async (postId: string, commentText: string) => {
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from('post_comments')
+        .insert({
+          post_id: postId,
+          user_id: user.id,
+          comment_text: commentText
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Comment added",
+        description: "Your comment has been posted"
+      });
+    } catch (error) {
+      console.error('Error adding comment:', error);
+      toast({
+        title: "Failed to comment",
+        description: "Could not add your comment",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const fetchComments = async (postId: string): Promise<PostComment[]> => {
+    try {
+      const { data, error } = await supabase
+        .from('post_comments')
+        .select(`
+          *,
+          profiles(full_name, avatar_url)
+        `)
+        .eq('post_id', postId)
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching comments:', error);
+      return [];
+    }
   };
 
   return (
     <GlowFeedContext.Provider value={{
       posts,
-      addPost,
+      isLoading,
+      fetchPosts,
+      createPost,
       likePost,
-      addComment
+      unlikePost,
+      addComment,
+      fetchComments
     }}>
       {children}
     </GlowFeedContext.Provider>

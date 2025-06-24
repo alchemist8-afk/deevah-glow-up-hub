@@ -1,93 +1,87 @@
 
+import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Leaf, Zap, Users, EyeOff } from 'lucide-react';
-
-export type Mood = 'calm' | 'fast' | 'social' | 'private';
-
-interface MoodPickerProps {
-  selectedMood?: Mood;
-  onMoodSelect: (mood: Mood) => void;
-  size?: 'sm' | 'lg';
-}
+import { Card } from '@/components/ui/card';
+import { useMood, MoodType } from '@/contexts/MoodContext';
 
 const moods = [
-  {
-    id: 'calm' as Mood,
-    icon: Leaf,
-    label: 'Calm',
-    description: 'Peaceful & relaxing',
-    color: 'from-green-400 to-emerald-500',
-    emoji: '🌿'
-  },
-  {
-    id: 'fast' as Mood,
-    icon: Zap,
-    label: 'Fast',
-    description: 'Quick & efficient',
-    color: 'from-yellow-400 to-orange-500',
-    emoji: '⚡'
-  },
-  {
-    id: 'social' as Mood,
-    icon: Users,
-    label: 'Social',
-    description: 'Fun with friends',
-    color: 'from-pink-400 to-purple-500',
-    emoji: '💃'
-  },
-  {
-    id: 'private' as Mood,
-    icon: EyeOff,
-    label: 'Private',
-    description: 'Just for you',
-    color: 'from-blue-400 to-indigo-500',
-    emoji: '🤫'
-  }
+  { type: 'calm' as MoodType, emoji: '🌿', label: 'Calm', description: 'Peaceful & Relaxing' },
+  { type: 'fast' as MoodType, emoji: '⚡', label: 'Fast', description: 'Quick & Efficient' },
+  { type: 'social' as MoodType, emoji: '💃', label: 'Social', description: 'Fun & Interactive' },
+  { type: 'private' as MoodType, emoji: '🤫', label: 'Private', description: 'Intimate & Personal' }
 ];
 
-export function MoodPicker({ selectedMood, onMoodSelect, size = 'lg' }: MoodPickerProps) {
+interface MoodPickerProps {
+  compact?: boolean;
+  onMoodSelect?: (mood: MoodType) => void;
+}
+
+export function MoodPicker({ compact = false, onMoodSelect }: MoodPickerProps) {
+  const { selectedMood, setMood } = useMood();
+
+  const handleMoodSelect = (mood: MoodType) => {
+    const newMood = selectedMood === mood ? null : mood;
+    setMood(newMood);
+    if (onMoodSelect && newMood) {
+      onMoodSelect(newMood);
+    }
+  };
+
+  if (compact) {
+    return (
+      <div className="flex gap-2 flex-wrap">
+        {moods.map((mood) => (
+          <Button
+            key={mood.type}
+            variant={selectedMood === mood.type ? "default" : "outline"}
+            size="sm"
+            onClick={() => handleMoodSelect(mood.type)}
+            className="flex items-center gap-2"
+          >
+            <span className="text-lg">{mood.emoji}</span>
+            <span>{mood.label}</span>
+          </Button>
+        ))}
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
-      {size === 'lg' && (
-        <div className="text-center">
-          <h3 className="text-2xl font-bold text-gray-900 mb-2">What's your vibe today?</h3>
-          <p className="text-gray-600">Choose your mood to get personalized recommendations</p>
+      <div className="text-center">
+        <h3 className="text-xl font-semibold mb-2">What's your vibe today?</h3>
+        <p className="text-gray-600">Choose your mood to get personalized recommendations</p>
+      </div>
+      
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {moods.map((mood) => (
+          <Card
+            key={mood.type}
+            className={`p-4 cursor-pointer transition-all hover:scale-105 ${
+              selectedMood === mood.type 
+                ? 'ring-2 ring-[#E07A5F] bg-[#E07A5F]/10' 
+                : 'hover:shadow-md'
+            }`}
+            onClick={() => handleMoodSelect(mood.type)}
+          >
+            <div className="text-center space-y-2">
+              <div className="text-4xl mb-2">{mood.emoji}</div>
+              <h4 className="font-semibold text-gray-900">{mood.label}</h4>
+              <p className="text-sm text-gray-600">{mood.description}</p>
+            </div>
+          </Card>
+        ))}
+      </div>
+
+      {selectedMood && (
+        <div className="text-center p-4 bg-[#F4F1DE] rounded-lg">
+          <p className="text-[#E07A5F] font-medium">
+            {moods.find(m => m.type === selectedMood)?.emoji} 
+            {moods.find(m => m.type === selectedMood)?.label} vibes selected! 
+            Your recommendations are now personalized.
+          </p>
         </div>
       )}
-      
-      <div className={`grid ${size === 'sm' ? 'grid-cols-4 gap-2' : 'grid-cols-2 md:grid-cols-4 gap-4'}`}>
-        {moods.map((mood) => {
-          const IconComponent = mood.icon;
-          const isSelected = selectedMood === mood.id;
-          
-          return (
-            <Card 
-              key={mood.id}
-              className={`cursor-pointer transition-all duration-200 hover:scale-105 ${
-                isSelected ? 'ring-2 ring-purple-500 shadow-lg' : 'hover:shadow-md'
-              }`}
-              onClick={() => onMoodSelect(mood.id)}
-            >
-              <CardContent className={`p-${size === 'sm' ? '3' : '6'} text-center`}>
-                <div className={`w-${size === 'sm' ? '8' : '12'} h-${size === 'sm' ? '8' : '12'} mx-auto mb-3 rounded-full bg-gradient-to-r ${mood.color} flex items-center justify-center`}>
-                  {size === 'sm' ? (
-                    <span className="text-lg">{mood.emoji}</span>
-                  ) : (
-                    <IconComponent className="w-6 h-6 text-white" />
-                  )}
-                </div>
-                <h4 className={`font-semibold ${size === 'sm' ? 'text-sm' : 'text-lg'} text-gray-900 mb-1`}>
-                  {mood.label}
-                </h4>
-                {size === 'lg' && (
-                  <p className="text-sm text-gray-600">{mood.description}</p>
-                )}
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
     </div>
   );
 }

@@ -5,9 +5,9 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { MoodProvider } from "@/contexts/MoodContext";
 import { BookingProvider } from "@/contexts/BookingContext";
 import { WalletProvider } from "@/contexts/WalletContext";
-import { ReferralProvider } from "@/contexts/ReferralContext";
 import { GlowFeedProvider } from "@/contexts/GlowFeedContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
@@ -34,8 +34,8 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
-      <WalletProvider>
-        <ReferralProvider>
+      <MoodProvider>
+        <WalletProvider>
           <GlowFeedProvider>
             <BookingProvider>
               <TooltipProvider>
@@ -106,8 +106,8 @@ const App = () => (
               </TooltipProvider>
             </BookingProvider>
           </GlowFeedProvider>
-        </ReferralProvider>
-      </WalletProvider>
+        </WalletProvider>
+      </MoodProvider>
     </AuthProvider>
   </QueryClientProvider>
 );

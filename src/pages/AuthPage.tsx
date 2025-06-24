@@ -1,97 +1,104 @@
 
-import { Layout } from "@/components/Layout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { useAuth, UserRole } from "@/contexts/AuthContext";
-import { Users, Palette, Building2, Truck } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import React, { useState, useEffect } from 'react';
+import { Navigate } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useAuth, UserRole } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
+import { Eye, EyeOff, Sparkles } from 'lucide-react';
 
 const AuthPage = () => {
-  const [selectedRole, setSelectedRole] = useState<UserRole | "">("");
-  const [loginData, setLoginData] = useState({ email: "", password: "" });
-  const [signupData, setSignupData] = useState({ 
-    name: "", 
-    email: "", 
-    password: "",
-    phone: ""
-  });
-  const [isLoading, setIsLoading] = useState(false);
-  
-  const navigate = useNavigate();
-  const { login, signup } = useAuth();
+  const { signUp, signIn, isAuthenticated, profile } = useAuth();
   const { toast } = useToast();
+  const [isLogin, setIsLogin] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  
+  // Form states
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [fullName, setFullName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [userRole, setUserRole] = useState<UserRole>('client');
 
-  const handleLogin = async (e: React.FormEvent) => {
+  // Redirect based on role after login
+  useEffect(() => {
+    if (isAuthenticated && profile) {
+      // This will be handled by the redirect logic in the main component
+    }
+  }, [isAuthenticated, profile]);
+
+  // Redirect if already authenticated
+  if (isAuthenticated && profile) {
+    switch (profile.user_role) {
+      case 'client':
+        return <Navigate to="/" replace />;
+      case 'artist':
+        return <Navigate to="/artist-dashboard" replace />;
+      case 'business':
+        return <Navigate to="/business" replace />;
+      case 'transport':
+        return <Navigate to="/transport-dashboard" replace />;
+      default:
+        return <Navigate to="/" replace />;
+    }
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    
-    try {
-      await login(loginData.email, loginData.password);
-      toast({
-        title: "Welcome back to Deevah! ✨",
-        description: "You've successfully logged in."
-      });
-      
-      // The auth system will automatically redirect based on role
-      navigate("/");
-    } catch (error) {
-      toast({
-        title: "Login failed",
-        description: "Please check your credentials and try again.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
-  const handleSignUp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!selectedRole) {
-      toast({
-        title: "Please select a role",
-        description: "Choose how you want to use Deevah.",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    setIsLoading(true);
-    
     try {
-      await signup(signupData.name, signupData.email, signupData.password, selectedRole, signupData.phone);
-      
-      toast({
-        title: "Welcome to Deevah! 🌟",
-        description: `Your ${selectedRole} account has been created successfully.`
-      });
+      if (isLogin) {
+        const { error } = await signIn(email, password);
+        if (error) {
+          toast({
+            title: "Login Failed",
+            description: error.message || "Please check your credentials",
+            variant: "destructive"
+          });
+        } else {
+          toast({
+            title: "Welcome back! ✨",
+            description: "You've successfully logged in"
+          });
+        }
+      } else {
+        if (!fullName.trim()) {
+          toast({
+            title: "Full name required",
+            description: "Please enter your full name",
+            variant: "destructive"
+          });
+          return;
+        }
 
-      // Redirect based on role
-      switch (selectedRole) {
-        case "client":
-          navigate("/");
-          break;
-        case "artist":
-          navigate("/artist-dashboard");
-          break;
-        case "business":
-          navigate("/business");
-          break;
-        case "transport":
-          navigate("/transport-dashboard");
-          break;
+        const { error } = await signUp(email, password, {
+          full_name: fullName,
+          user_role: userRole,
+          phone: phone || undefined
+        });
+
+        if (error) {
+          toast({
+            title: "Signup Failed",
+            description: error.message || "Please try again",
+            variant: "destructive"
+          });
+        } else {
+          toast({
+            title: "Welcome to Deevah! 🎉",
+            description: "Your account has been created successfully"
+          });
+        }
       }
-    } catch (error) {
+    } catch (error: any) {
       toast({
-        title: "Signup failed",
-        description: "Please try again with different credentials.",
+        title: "Something went wrong",
+        description: "Please try again later",
         variant: "destructive"
       });
     } finally {
@@ -100,175 +107,138 @@ const AuthPage = () => {
   };
 
   return (
-    <Layout>
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50 flex items-center justify-center p-6">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <CardTitle className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-2">
-              Join Deevah
-            </CardTitle>
-            <p className="text-gray-600">Your beauty & lifestyle platform</p>
-          </CardHeader>
-          <CardContent>
-            <Tabs defaultValue="login" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="login">Login</TabsTrigger>
-                <TabsTrigger value="signup">Sign Up</TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="login" className="space-y-4 mt-4">
-                <form onSubmit={handleLogin} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email or Phone</Label>
-                    <Input 
-                      id="email" 
-                      type="email" 
-                      placeholder="Enter your email"
-                      value={loginData.email}
-                      onChange={(e) => setLoginData(prev => ({ ...prev, email: e.target.value }))}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="password">Password</Label>
-                    <Input 
-                      id="password" 
-                      type="password" 
-                      placeholder="Enter your password"
-                      value={loginData.password}
-                      onChange={(e) => setLoginData(prev => ({ ...prev, password: e.target.value }))}
-                      required
-                    />
-                  </div>
-                  
-                  <div className="text-sm text-gray-600 bg-blue-50 p-3 rounded-lg">
-                    <p className="font-medium mb-1">Test Accounts:</p>
-                    <p>• Client: client@test.com</p>
-                    <p>• Artist: artist@test.com</p>
-                    <p>• Business: business@test.com</p>
-                    <p className="text-xs mt-1 text-gray-500">Password: any text</p>
-                  </div>
-                  
-                  <Button 
-                    type="submit"
-                    className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
-                    disabled={isLoading}
-                  >
-                    {isLoading ? "Logging in..." : "Login"}
-                  </Button>
-                </form>
-              </TabsContent>
-              
-              <TabsContent value="signup" className="space-y-4 mt-4">
-                <form onSubmit={handleSignUp} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Full Name</Label>
-                    <Input 
-                      id="name" 
-                      placeholder="Enter your full name"
-                      value={signupData.name}
-                      onChange={(e) => setSignupData(prev => ({ ...prev, name: e.target.value }))}
-                      required
-                    />
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="signup-email">Email</Label>
-                      <Input 
-                        id="signup-email" 
-                        type="email" 
-                        placeholder="Email address"
-                        value={signupData.email}
-                        onChange={(e) => setSignupData(prev => ({ ...prev, email: e.target.value }))}
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="phone">Phone</Label>
-                      <Input 
-                        id="phone" 
-                        type="tel" 
-                        placeholder="Phone number"
-                        value={signupData.phone}
-                        onChange={(e) => setSignupData(prev => ({ ...prev, phone: e.target.value }))}
-                      />
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-password">Password</Label>
-                    <Input 
-                      id="signup-password" 
-                      type="password" 
-                      placeholder="Create a password"
-                      value={signupData.password}
-                      onChange={(e) => setSignupData(prev => ({ ...prev, password: e.target.value }))}
-                      required
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label>How do you want to use Deevah?</Label>
-                    <Select value={selectedRole} onValueChange={(value: UserRole) => setSelectedRole(value)}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select your role" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="client">
-                          <div className="flex items-center space-x-2">
-                            <Users className="w-4 h-4" />
-                            <div>
-                              <span className="font-medium">Client</span>
-                              <p className="text-xs text-gray-500">Book beauty services & experiences</p>
-                            </div>
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="artist">
-                          <div className="flex items-center space-x-2">
-                            <Palette className="w-4 h-4" />
-                            <div>
-                              <span className="font-medium">Artist</span>
-                              <p className="text-xs text-gray-500">Provide beauty services & build clientele</p>
-                            </div>
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="business">
-                          <div className="flex items-center space-x-2">
-                            <Building2 className="w-4 h-4" />
-                            <div>
-                              <span className="font-medium">Business Owner</span>
-                              <p className="text-xs text-gray-500">Manage salon, products & services</p>
-                            </div>
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="transport">
-                          <div className="flex items-center space-x-2">
-                            <Truck className="w-4 h-4" />
-                            <div>
-                              <span className="font-medium">Transport Provider</span>
-                              <p className="text-xs text-gray-500">Deliver products & earn money</p>
-                            </div>
-                          </div>
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <Button 
-                    type="submit"
-                    className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
-                    disabled={isLoading}
-                  >
-                    {isLoading ? "Creating account..." : "Start Your Glow Journey"}
-                  </Button>
-                </form>
-              </TabsContent>
-            </Tabs>
-          </CardContent>
-        </Card>
-      </div>
-    </Layout>
+    <div className="min-h-screen bg-gradient-to-br from-[#F4F1DE] to-[#E07A5F]/20 flex items-center justify-center p-4">
+      <Card className="w-full max-w-md">
+        <CardHeader className="text-center">
+          <div className="flex items-center justify-center mb-4">
+            <Sparkles className="w-8 h-8 text-[#E07A5F] mr-2" />
+            <h1 className="text-2xl font-bold text-gray-900">Deevah Glow Hub</h1>
+          </div>
+          <CardTitle className="text-xl">
+            {isLogin ? 'Welcome Back' : 'Join the Glow Community'}
+          </CardTitle>
+          <p className="text-gray-600">
+            {isLogin 
+              ? 'Sign in to continue your glow journey' 
+              : 'Create your account and start glowing'
+            }
+          </p>
+        </CardHeader>
+        
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {!isLogin && (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="fullName">Full Name *</Label>
+                  <Input
+                    id="fullName"
+                    type="text"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    placeholder="Enter your full name"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Phone Number</Label>
+                  <Input
+                    id="phone"
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="Enter your phone number"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="role">I am a... *</Label>
+                  <Select value={userRole} onValueChange={(value: UserRole) => setUserRole(value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select your role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="client">Client (Book services)</SelectItem>
+                      <SelectItem value="artist">Artist (Provide services)</SelectItem>
+                      <SelectItem value="business">Business Owner (Salon/Shop)</SelectItem>
+                      <SelectItem value="transport">Transport Provider (Deliveries)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </>
+            )}
+
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Enter your email"
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter your password"
+                  required
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4 text-gray-400" />
+                  ) : (
+                    <Eye className="h-4 w-4 text-gray-400" />
+                  )}
+                </Button>
+              </div>
+            </div>
+
+            <Button 
+              type="submit" 
+              className="w-full bg-[#E07A5F] hover:bg-[#E07A5F]/90"
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <div className="flex items-center">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  {isLogin ? 'Signing in...' : 'Creating account...'}
+                </div>
+              ) : (
+                isLogin ? 'Sign In' : 'Create Account'
+              )}
+            </Button>
+          </form>
+
+          <div className="mt-6 text-center">
+            <p className="text-gray-600">
+              {isLogin ? "Don't have an account?" : "Already have an account?"}
+            </p>
+            <Button
+              variant="link"
+              onClick={() => setIsLogin(!isLogin)}
+              className="text-[#E07A5F] hover:text-[#E07A5F]/80"
+            >
+              {isLogin ? 'Sign up here' : 'Sign in instead'}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   );
 };
 

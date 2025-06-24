@@ -1,132 +1,166 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { User, Session } from '@supabase/supabase-js';
 
 export type UserRole = 'client' | 'artist' | 'business' | 'transport';
 
-export interface User {
+export interface UserProfile {
   id: string;
-  name: string;
-  email: string;
+  full_name: string;
   phone?: string;
-  role: UserRole;
-  avatar?: string;
-  verified?: boolean;
-  rating?: number;
-  completedJobs?: number;
-  glowCoins?: number;
-  referralCode?: string;
+  avatar_url?: string;
+  user_role: UserRole;
+  bio?: string;
+  location?: string;
+  created_at: string;
+  updated_at: string;
 }
 
-export interface AuthContextType {
+interface AuthContextType {
   user: User | null;
-  login: (email: string, password: string) => Promise<void>;
-  signup: (name: string, email: string, password: string, role: UserRole, phone?: string, avatar?: string) => Promise<void>;
-  logout: () => void;
+  profile: UserProfile | null;
+  session: Session | null;
   isAuthenticated: boolean;
-  updateUser: (updates: Partial<User>) => void;
+  isLoading: boolean;
+  signUp: (email: string, password: string, userData: { full_name: string; user_role: UserRole; phone?: string }) => Promise<{ error: any }>;
+  signIn: (email: string, password: string) => Promise<{ error: any }>;
+  signOut: () => Promise<void>;
+  updateProfile: (updates: Partial<UserProfile>) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const fetchProfile = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error fetching profile:', error);
+        return;
+      }
+
+      if (data) {
+        setProfile(data);
+      }
+    } catch (error) {
+      console.error('Error in fetchProfile:', error);
+    }
+  };
 
   useEffect(() => {
-    const savedUser = localStorage.getItem('deevah_user');
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
-    }
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log('Auth state changed:', event, session?.user?.id);
+        setSession(session);
+        setUser(session?.user ?? null);
+        
+        if (session?.user) {
+          // Defer profile fetching to prevent deadlocks
+          setTimeout(() => {
+            fetchProfile(session.user.id);
+          }, 0);
+        } else {
+          setProfile(null);
+        }
+        setIsLoading(false);
+      }
+    );
+
+    // Check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        fetchProfile(session.user.id);
+      }
+      setIsLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  const login = async (email: string, password: string) => {
-    // Simulate API call with role-based users
-    const mockUsers: Record<string, User> = {
-      'client@test.com': {
-        id: '1',
-        name: 'Sarah Johnson',
-        email: 'client@test.com',
-        role: 'client',
-        avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b739',
-        glowCoins: 150,
-        referralCode: 'SARAH150'
-      },
-      'artist@test.com': {
-        id: '2',
-        name: 'Maya Styles',
-        email: 'artist@test.com',
-        role: 'artist',
-        avatar: 'https://images.unsplash.com/photo-1489424731084-a5d8b219a5bb',
-        verified: true,
-        rating: 4.9,
-        completedJobs: 127,
-        glowCoins: 320,
-        referralCode: 'MAYA320'
-      },
-      'business@test.com': {
-        id: '3',
-        name: 'Golden Beauty Salon',
-        email: 'business@test.com',
-        role: 'business',
-        avatar: 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43',
-        verified: true,
-        glowCoins: 850,
-        referralCode: 'GOLDEN850'
-      }
-    };
-
-    const foundUser = mockUsers[email] || {
-      id: Date.now().toString(),
-      name: 'New User',
-      email,
-      role: 'client' as UserRole,
-      glowCoins: 50,
-      referralCode: `USER${Date.now().toString().slice(-4)}`
-    };
-    
-    setUser(foundUser);
-    localStorage.setItem('deevah_user', JSON.stringify(foundUser));
-  };
-
-  const signup = async (name: string, email: string, password: string, role: UserRole, phone?: string, avatar?: string) => {
-    const newUser: User = {
-      id: Date.now().toString(),
-      name,
-      email,
-      phone,
-      role,
-      avatar: avatar || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e',
-      verified: false,
-      rating: role === 'artist' ? 5.0 : undefined,
-      completedJobs: 0,
-      glowCoins: 50,
-      referralCode: `${name.toUpperCase().slice(0, 3)}${Date.now().toString().slice(-3)}`
-    };
-    
-    setUser(newUser);
-    localStorage.setItem('deevah_user', JSON.stringify(newUser));
-  };
-
-  const updateUser = (updates: Partial<User>) => {
-    if (user) {
-      const updatedUser = { ...user, ...updates };
-      setUser(updatedUser);
-      localStorage.setItem('deevah_user', JSON.stringify(updatedUser));
+  const signUp = async (email: string, password: string, userData: { full_name: string; user_role: UserRole; phone?: string }) => {
+    try {
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: userData,
+          emailRedirectTo: `${window.location.origin}/`
+        }
+      });
+      return { error };
+    } catch (error) {
+      console.error('SignUp error:', error);
+      return { error };
     }
   };
 
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem('deevah_user');
+  const signIn = async (email: string, password: string) => {
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      return { error };
+    } catch (error) {
+      console.error('SignIn error:', error);
+      return { error };
+    }
+  };
+
+  const signOut = async () => {
+    try {
+      await supabase.auth.signOut();
+      setUser(null);
+      setProfile(null);
+      setSession(null);
+    } catch (error) {
+      console.error('SignOut error:', error);
+    }
+  };
+
+  const updateProfile = async (updates: Partial<UserProfile>) => {
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update(updates)
+        .eq('id', user.id);
+
+      if (error) throw error;
+
+      // Update local state
+      setProfile(prev => prev ? { ...prev, ...updates } : null);
+    } catch (error) {
+      console.error('Error updating profile:', error);
+    }
   };
 
   return (
     <AuthContext.Provider value={{
       user,
-      login,
-      signup,
-      logout,
+      profile,
+      session,
       isAuthenticated: !!user,
-      updateUser
+      isLoading,
+      signUp,
+      signIn,
+      signOut,
+      updateProfile,
     }}>
       {children}
     </AuthContext.Provider>
