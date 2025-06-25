@@ -5,59 +5,49 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
-import { MoodProvider } from "@/contexts/MoodContext";
-import { BookingProvider } from "@/contexts/BookingContext";
 import { WalletProvider } from "@/contexts/WalletContext";
+import { BookingProvider } from "@/contexts/BookingContext";
+import { MoodProvider } from "@/contexts/MoodContext";
 import { GlowFeedProvider } from "@/contexts/GlowFeedContext";
-import { ProtectedRoute } from "@/components/ProtectedRoute";
+import ProtectedRoute from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
-import NotFound from "./pages/NotFound";
-import ServicesPage from "./pages/ServicesPage";
-import ProductsPage from "./pages/ProductsPage";
-import FoodPage from "./pages/FoodPage";
-import GamesPage from "./pages/GamesPage";
-import CutsPage from "./pages/CutsPage";
 import AuthPage from "./pages/AuthPage";
+import ServicesPage from "./pages/ServicesPage";
 import BraidsPage from "./pages/BraidsPage";
-import NailsPage from "./pages/NailsPage";
 import DreadlocksPage from "./pages/DreadlocksPage";
 import MassagePage from "./pages/MassagePage";
-import BusinessDashboard from "./pages/BusinessDashboard";
-import ArtistDashboard from "./pages/ArtistDashboard";
-import TransportDashboard from "./pages/TransportDashboard";
+import NailsPage from "./pages/NailsPage";
+import CutsPage from "./pages/CutsPage";
+import FoodPage from "./pages/FoodPage";
 import WalletPage from "./pages/WalletPage";
-import ReferralPage from "./pages/ReferralPage";
-import GlowFeedPage from "./pages/GlowFeedPage";
+import ArtistDashboard from "./pages/ArtistDashboard";
+import BusinessDashboard from "./pages/BusinessDashboard";
+import TransportDashboard from "./pages/TransportDashboard";
+import ClientDashboard from "./pages/ClientDashboard";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <MoodProvider>
+    <BrowserRouter>
+      <AuthProvider>
         <WalletProvider>
-          <GlowFeedProvider>
-            <BookingProvider>
-              <TooltipProvider>
-                <Toaster />
-                <Sonner />
-                <BrowserRouter>
+          <BookingProvider>
+            <MoodProvider>
+              <GlowFeedProvider>
+                <TooltipProvider>
+                  <Toaster />
+                  <Sonner />
                   <Routes>
-                    {/* Public Routes */}
                     <Route path="/" element={<Index />} />
-                    <Route path="/services" element={<ServicesPage />} />
-                    <Route path="/products" element={<ProductsPage />} />
-                    <Route path="/food" element={<FoodPage />} />
-                    <Route path="/games" element={<GamesPage />} />
-                    <Route path="/cuts" element={<CutsPage />} />
                     <Route path="/auth" element={<AuthPage />} />
+                    <Route path="/services" element={<ServicesPage />} />
                     <Route path="/braids" element={<BraidsPage />} />
-                    <Route path="/nails" element={<NailsPage />} />
                     <Route path="/dreadlocks" element={<DreadlocksPage />} />
                     <Route path="/massage" element={<MassagePage />} />
-                    <Route path="/glow-feed" element={<GlowFeedPage />} />
-                    
-                    {/* Protected Routes */}
+                    <Route path="/nails" element={<NailsPage />} />
+                    <Route path="/cuts" element={<CutsPage />} />
+                    <Route path="/food" element={<FoodPage />} />
                     <Route 
                       path="/wallet" 
                       element={
@@ -67,48 +57,45 @@ const App = () => (
                       } 
                     />
                     <Route 
-                      path="/referrals" 
+                      path="/dashboard/client" 
                       element={
                         <ProtectedRoute>
-                          <ReferralPage />
+                          <ClientDashboard />
                         </ProtectedRoute>
                       } 
                     />
                     <Route 
-                      path="/business" 
+                      path="/dashboard/artist" 
                       element={
-                        <ProtectedRoute allowedRoles={['business']}>
-                          <BusinessDashboard />
-                        </ProtectedRoute>
-                      } 
-                    />
-                    <Route 
-                      path="/artist-dashboard" 
-                      element={
-                        <ProtectedRoute allowedRoles={['artist']}>
+                        <ProtectedRoute>
                           <ArtistDashboard />
                         </ProtectedRoute>
                       } 
                     />
                     <Route 
-                      path="/transport-dashboard" 
+                      path="/dashboard/business" 
                       element={
-                        <ProtectedRoute allowedRoles={['transport']}>
+                        <ProtectedRoute>
+                          <BusinessDashboard />
+                        </ProtectedRoute>
+                      } 
+                    />
+                    <Route 
+                      path="/dashboard/transport" 
+                      element={
+                        <ProtectedRoute>
                           <TransportDashboard />
                         </ProtectedRoute>
                       } 
                     />
-                    
-                    {/* Catch-all route */}
-                    <Route path="*" element={<NotFound />} />
                   </Routes>
-                </BrowserRouter>
-              </TooltipProvider>
-            </BookingProvider>
-          </GlowFeedProvider>
+                </TooltipProvider>
+              </GlowFeedProvider>
+            </MoodProvider>
+          </BookingProvider>
         </WalletProvider>
-      </MoodProvider>
-    </AuthProvider>
+      </AuthProvider>
+    </BrowserRouter>
   </QueryClientProvider>
 );
 
