@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useAuth, UserRole } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Eye, EyeOff, Sparkles } from 'lucide-react';
@@ -17,6 +18,7 @@ const AuthPage = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [isAuthLoading, setIsAuthLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
   
   // Form states
   const [email, setEmail] = useState('');
@@ -25,24 +27,31 @@ const AuthPage = () => {
   const [phone, setPhone] = useState('');
   const [userRole, setUserRole] = useState<UserRole>('client');
 
+  // Check for remember me on mount
+  useEffect(() => {
+    const remembered = localStorage.getItem('deevah_remember_me') === 'true';
+    setRememberMe(remembered);
+  }, []);
+
   // Redirect based on role after successful authentication
   useEffect(() => {
     if (isAuthenticated && profile && !isLoading) {
       const redirectPath = getRoleBasedRedirect(profile.user_role);
-      navigate(redirectPath, { replace: true });
+      // Use replace to prevent going back to auth page
+      window.location.href = redirectPath;
     }
   }, [isAuthenticated, profile, isLoading, navigate]);
 
   const getRoleBasedRedirect = (role: UserRole): string => {
     switch (role) {
       case 'client':
-        return '/';
+        return '/dashboard/client';
       case 'artist':
-        return '/artist-dashboard';
+        return '/dashboard/artist';
       case 'business':
-        return '/business';
+        return '/dashboard/business';
       case 'transport':
-        return '/transport-dashboard';
+        return '/dashboard/transport';
       default:
         return '/';
     }
@@ -59,7 +68,7 @@ const AuthPage = () => {
 
     try {
       if (isLogin) {
-        const { error } = await signIn(email, password);
+        const { error } = await signIn(email, password, rememberMe);
         if (error) {
           toast({
             title: "Login Failed",
@@ -97,8 +106,12 @@ const AuthPage = () => {
         } else {
           toast({
             title: "Welcome to Deevah! 🎉",
-            description: "Your account has been created successfully. Please check your email to verify your account."
+            description: "Your account has been created successfully."
           });
+          // Auto-redirect after successful signup
+          setTimeout(() => {
+            window.location.href = getRoleBasedRedirect(userRole);
+          }, 1000);
         }
       }
     } catch (error: any) {
@@ -114,7 +127,7 @@ const AuthPage = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#F4F1DE] to-[#E07A5F]/20 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
+      <Card className="w-full max-w-md mx-auto">
         <CardHeader className="text-center">
           <div className="flex items-center justify-center mb-4">
             <Sparkles className="w-8 h-8 text-[#E07A5F] mr-2" />
@@ -144,6 +157,7 @@ const AuthPage = () => {
                     onChange={(e) => setFullName(e.target.value)}
                     placeholder="Enter your full name"
                     required
+                    className="h-12 text-base" // Larger for mobile
                   />
                 </div>
 
@@ -155,13 +169,14 @@ const AuthPage = () => {
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     placeholder="Enter your phone number"
+                    className="h-12 text-base"
                   />
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="role">I am a... *</Label>
                   <Select value={userRole} onValueChange={(value: UserRole) => setUserRole(value)}>
-                    <SelectTrigger>
+                    <SelectTrigger className="h-12 text-base">
                       <SelectValue placeholder="Select your role" />
                     </SelectTrigger>
                     <SelectContent>
@@ -184,6 +199,7 @@ const AuthPage = () => {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="Enter your email"
                 required
+                className="h-12 text-base"
               />
             </div>
 
@@ -197,6 +213,7 @@ const AuthPage = () => {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Enter your password"
                   required
+                  className="h-12 text-base pr-12"
                 />
                 <Button
                   type="button"
@@ -214,9 +231,22 @@ const AuthPage = () => {
               </div>
             </div>
 
+            {isLogin && (
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="remember"
+                  checked={rememberMe}
+                  onCheckedChange={(checked) => setRememberMe(checked as boolean)}
+                />
+                <Label htmlFor="remember" className="text-sm text-gray-600">
+                  Remember me
+                </Label>
+              </div>
+            )}
+
             <Button 
               type="submit" 
-              className="w-full bg-[#E07A5F] hover:bg-[#E07A5F]/90"
+              className="w-full h-12 text-base bg-[#E07A5F] hover:bg-[#E07A5F]/90"
               disabled={isAuthLoading}
             >
               {isAuthLoading ? (

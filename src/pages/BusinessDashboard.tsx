@@ -1,4 +1,3 @@
-
 import { Layout } from "@/components/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -21,7 +20,12 @@ import {
   Edit,
   Trash2,
   UserPlus,
-  Settings
+  Settings,
+  Star,
+  MessageCircle,
+  Calendar,
+  BarChart3,
+  Award
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useWallet } from "@/contexts/WalletContext";
@@ -52,6 +56,17 @@ interface BusinessItem {
   created_at: string;
 }
 
+interface ArtistPerformance {
+  id: string;
+  full_name: string;
+  avatar_url?: string;
+  bookings_count: number;
+  avg_rating: number;
+  services_offered: number;
+  revenue_generated: number;
+  status: string;
+}
+
 const BusinessDashboard = () => {
   const { profile } = useAuth();
   const { balance, transactions } = useWallet();
@@ -61,6 +76,16 @@ const BusinessDashboard = () => {
   const [services, setServices] = useState<BusinessItem[]>([]);
   const [products, setProducts] = useState<BusinessItem[]>([]);
   const [meals, setMeals] = useState<BusinessItem[]>([]);
+  const [artistPerformance, setArtistPerformance] = useState<ArtistPerformance[]>([]);
+  const [businessStats, setBusinessStats] = useState({
+    totalBookings: 0,
+    weeklyBookings: 0,
+    monthlyBookings: 0,
+    totalRevenue: 0,
+    weeklyRevenue: 0,
+    monthlyRevenue: 0,
+  });
+  
   const [newItem, setNewItem] = useState({
     name: '',
     description: '',
@@ -70,14 +95,12 @@ const BusinessDashboard = () => {
     stock_quantity: 0,
     type: 'service' as 'service' | 'product' | 'meal'
   });
-  const [newTeamMember, setNewTeamMember] = useState({
-    email: '',
-    role: 'staff'
-  });
 
   useEffect(() => {
     if (profile) {
       fetchBusinessData();
+      fetchArtistPerformance();
+      fetchBusinessStats();
     }
   }, [profile]);
 
@@ -108,32 +131,129 @@ const BusinessDashboard = () => {
         })) as TeamMember[]);
       }
 
-      // Fetch services
-      const { data: servicesData } = await supabase
-        .from('services')
-        .select('*')
-        .eq('provider_id', profile.id);
+      // Fetch services, products, meals
+      const [servicesRes, productsRes] = await Promise.all([
+        supabase.from('services').select('*').eq('provider_id', profile.id),
+        supabase.from('products').select('*').eq('provider_id', profile.id)
+      ]);
 
-      if (servicesData) {
-        setServices(servicesData);
-      }
-
-      // Fetch products
-      const { data: productsData } = await supabase
-        .from('products')
-        .select('*')
-        .eq('provider_id', profile.id);
-
-      if (productsData) {
-        setProducts(productsData);
-        // Separate meals from products
-        const mealItems = productsData.filter(p => p.category === 'Food' || p.category === 'Beverages');
-        const productItems = productsData.filter(p => p.category !== 'Food' && p.category !== 'Beverages');
+      if (servicesRes.data) setServices(servicesRes.data);
+      if (productsRes.data) {
+        const mealItems = productsRes.data.filter(p => p.category === 'Food' || p.category === 'Beverages');
+        const productItems = productsRes.data.filter(p => p.category !== 'Food' && p.category !== 'Beverages');
         setMeals(mealItems);
         setProducts(productItems);
       }
     } catch (error) {
       console.error('Error fetching business data:', error);
+    }
+  };
+
+  const fetchArtistPerformance = async () => {
+    if (!profile) return;
+
+    try {
+      // Fetch artists associated with this business
+      const { data: artistsData } = await supabase
+        .from('business_teams')
+        .select(`
+          member_id,
+          profiles!business_teams_member_id_fkey (
+            id,
+            full_name,
+            avatar_url
+          )
+        `)
+        .eq('business_id', profile.id)
+        .eq('role', 'artist');
+
+      if (artistsData) {
+        const artistPerformanceData = await Promise.all(
+          artistsData.map(async (artist) => {
+            const artistId = artist.member_id;
+            
+            // Get bookings count and revenue
+            const { data: bookingsData } = await supabase
+              .from('bookings')
+              .select('total_amount, status')
+              .eq('provider_id', artistId);
+
+            // Get services count
+            const { data: servicesData } = await supabase
+              .from('services')
+              .select('id')
+              .eq('provider_id', artistId);
+
+            // Get artist availability status
+            const { data: availabilityData } = await supabase
+              .from('artist_availability')
+              .select('status')
+              .eq('artist_id', artistId)
+              .single();
+
+            const bookingsCount = bookingsData?.length || 0;
+            const revenue = bookingsData?.reduce((sum, booking) => sum + (booking.total_amount || 0), 0) || 0;
+            const servicesCount = servicesData?.length || 0;
+
+            return {
+              id: artistId,
+              full_name: (artist.profiles as any)?.full_name || 'Unknown Artist',
+              avatar_url: (artist.profiles as any)?.avatar_url,
+              bookings_count: bookingsCount,
+              avg_rating: 4.8, // Mock rating - would come from reviews table
+              services_offered: servicesCount,
+              revenue_generated: revenue,
+              status: availabilityData?.status || 'offline'
+            };
+          })
+        );
+
+        setArtistPerformance(artistPerformanceData);
+      }
+    } catch (error) {
+      console.error('Error fetching artist performance:', error);
+    }
+  };
+
+  const fetchBusinessStats = async () => {
+    if (!profile) return;
+
+    try {
+      // Get all bookings for artists under this business
+      const { data: teamArtists } = await supabase
+        .from('business_teams')
+        .select('member_id')
+        .eq('business_id', profile.id)
+        .eq('role', 'artist');
+
+      if (teamArtists && teamArtists.length > 0) {
+        const artistIds = teamArtists.map(a => a.member_id);
+        
+        const { data: allBookings } = await supabase
+          .from('bookings')
+          .select('total_amount, created_at, status')
+          .in('provider_id', artistIds);
+
+        if (allBookings) {
+          const now = new Date();
+          const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+          const weeklyBookings = allBookings.filter(b => new Date(b.created_at) >= weekAgo);
+          const monthlyBookings = allBookings.filter(b => new Date(b.created_at) >= monthAgo);
+
+          setBusinessStats({
+            totalBookings: allBookings.length,
+            weeklyBookings: weeklyBookings.length,
+            monthlyBookings: monthlyBookings.length,
+            totalRevenue: allBookings.reduce((sum, b) => sum + (b.total_amount || 0), 0),
+            weeklyRevenue: weeklyBookings.reduce((sum, b) => sum + (b.total_amount || 0), 0),
+            monthlyRevenue: monthlyBookings.reduce((sum, b) => sum + (b.total_amount || 0), 0),
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching business stats:', error);
     }
   };
 
@@ -184,54 +304,6 @@ const BusinessDashboard = () => {
     }
   };
 
-  const addTeamMember = async () => {
-    if (!profile || !newTeamMember.email) return;
-
-    try {
-      // First find the user by email
-      const { data: userData } = await supabase
-        .from('profiles')
-        .select('id')
-        .ilike('full_name', `%${newTeamMember.email}%`)
-        .single();
-
-      if (!userData) {
-        toast({
-          title: "User Not Found",
-          description: "No user found with that email",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      const { error } = await supabase
-        .from('business_teams')
-        .insert({
-          business_id: profile.id,
-          member_id: userData.id,
-          role: newTeamMember.role,
-          permissions: {}
-        });
-
-      if (error) throw error;
-
-      setNewTeamMember({ email: '', role: 'staff' });
-      await fetchBusinessData();
-      
-      toast({
-        title: "Team Member Added",
-        description: "New team member has been added successfully"
-      });
-    } catch (error) {
-      console.error('Error adding team member:', error);
-      toast({
-        title: "Error",
-        description: "Failed to add team member",
-        variant: "destructive"
-      });
-    }
-  };
-
   const sampleImages = [
     'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e',
     'https://images.unsplash.com/photo-1487412947147-5cebf100ffc2',
@@ -239,34 +311,29 @@ const BusinessDashboard = () => {
     'https://images.unsplash.com/photo-1571875257727-4ddc5cf765d6'
   ];
 
-  const todaysRevenue = transactions
-    .filter(t => t.type === 'booking' && new Date(t.created_at).toDateString() === new Date().toDateString())
-    .reduce((sum, t) => sum + t.amount, 0);
-
-  const totalItems = services.length + products.length + meals.length;
-
   return (
     <Layout>
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50">
-        <div className="container mx-auto px-6 py-8">
-          <div className="flex items-center justify-between mb-8">
-            <div>
-              <h1 className="text-4xl font-bold text-gray-900">Business Empire</h1>
-              <p className="text-xl text-gray-600">Command your business operations</p>
+        <div className="container mx-auto px-4 lg:px-6 py-4 lg:py-8">
+          {/* Mobile-friendly header */}
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-6 lg:mb-8">
+            <div className="mb-4 lg:mb-0">
+              <h1 className="text-2xl lg:text-4xl font-bold text-gray-900">Business Empire</h1>
+              <p className="text-base lg:text-xl text-gray-600">Command your business operations</p>
             </div>
             
             <Dialog>
               <DialogTrigger asChild>
-                <Button className="bg-gradient-to-r from-blue-600 to-indigo-600">
+                <Button className="w-full lg:w-auto bg-gradient-to-r from-blue-600 to-indigo-600">
                   <Plus className="w-4 h-4 mr-2" />
-                  Add New Item
+                  Add Item
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-md">
+              <DialogContent className="max-w-md mx-4 lg:mx-auto">
                 <DialogHeader>
                   <DialogTitle>Add Business Item</DialogTitle>
                 </DialogHeader>
-                <div className="space-y-4">
+                <div className="space-y-4 max-h-96 overflow-y-auto">
                   <div>
                     <Label>Item Type</Label>
                     <Select
@@ -346,43 +413,6 @@ const BusinessDashboard = () => {
                     )}
                   </div>
 
-                  <div>
-                    <Label htmlFor="category">Category</Label>
-                    <Select
-                      value={newItem.category}
-                      onValueChange={(value) => setNewItem(prev => ({ ...prev, category: value }))}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select category..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {newItem.type === 'service' && (
-                          <>
-                            <SelectItem value="Hair">Hair</SelectItem>
-                            <SelectItem value="Nails">Nails</SelectItem>
-                            <SelectItem value="Makeup">Makeup</SelectItem>
-                            <SelectItem value="Massage">Massage</SelectItem>
-                          </>
-                        )}
-                        {newItem.type === 'product' && (
-                          <>
-                            <SelectItem value="Beauty">Beauty</SelectItem>
-                            <SelectItem value="Hair Care">Hair Care</SelectItem>
-                            <SelectItem value="Skincare">Skincare</SelectItem>
-                            <SelectItem value="Accessories">Accessories</SelectItem>
-                          </>
-                        )}
-                        {newItem.type === 'meal' && (
-                          <>
-                            <SelectItem value="Food">Food</SelectItem>
-                            <SelectItem value="Beverages">Beverages</SelectItem>
-                            <SelectItem value="Snacks">Snacks</SelectItem>
-                          </>
-                        )}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
                   <Button onClick={addBusinessItem} className="w-full">
                     Add {newItem.type}
                   </Button>
@@ -391,64 +421,133 @@ const BusinessDashboard = () => {
             </Dialog>
           </div>
 
-          {/* Stats Cards */}
-          <div className="grid md:grid-cols-4 gap-6 mb-8">
+          {/* Stats Cards - Mobile responsive grid */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-6 mb-6 lg:mb-8">
             <Card>
-              <CardContent className="p-6">
+              <CardContent className="p-4 lg:p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600">Today's Revenue</p>
-                    <p className="text-2xl font-bold text-green-600">KSh {todaysRevenue}</p>
+                    <p className="text-xs lg:text-sm font-medium text-gray-600">Weekly Revenue</p>
+                    <p className="text-lg lg:text-2xl font-bold text-green-600">KSh {businessStats.weeklyRevenue}</p>
                   </div>
-                  <DollarSign className="w-8 h-8 text-green-600" />
+                  <DollarSign className="w-6 h-6 lg:w-8 lg:h-8 text-green-600" />
                 </div>
               </CardContent>
             </Card>
 
             <Card>
-              <CardContent className="p-6">
+              <CardContent className="p-4 lg:p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600">Total Items</p>
-                    <p className="text-2xl font-bold text-blue-600">{totalItems}</p>
+                    <p className="text-xs lg:text-sm font-medium text-gray-600">Total Artists</p>
+                    <p className="text-lg lg:text-2xl font-bold text-blue-600">{artistPerformance.length}</p>
                   </div>
-                  <Package className="w-8 h-8 text-blue-600" />
+                  <Users className="w-6 h-6 lg:w-8 lg:h-8 text-blue-600" />
                 </div>
               </CardContent>
             </Card>
 
             <Card>
-              <CardContent className="p-6">
+              <CardContent className="p-4 lg:p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600">Team Members</p>
-                    <p className="text-2xl font-bold text-purple-600">{teamMembers.length}</p>
+                    <p className="text-xs lg:text-sm font-medium text-gray-600">This Month</p>
+                    <p className="text-lg lg:text-2xl font-bold text-purple-600">{businessStats.monthlyBookings}</p>
                   </div>
-                  <Users className="w-8 h-8 text-purple-600" />
+                  <Calendar className="w-6 h-6 lg:w-8 lg:h-8 text-purple-600" />
                 </div>
               </CardContent>
             </Card>
 
             <Card>
-              <CardContent className="p-6">
+              <CardContent className="p-4 lg:p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600">Wallet Balance</p>
-                    <p className="text-2xl font-bold text-orange-600">KSh {balance}</p>
+                    <p className="text-xs lg:text-sm font-medium text-gray-600">Wallet Balance</p>
+                    <p className="text-lg lg:text-2xl font-bold text-orange-600">KSh {balance}</p>
                   </div>
-                  <Store className="w-8 h-8 text-orange-600" />
+                  <Store className="w-6 h-6 lg:w-8 lg:h-8 text-orange-600" />
                 </div>
               </CardContent>
             </Card>
           </div>
 
-          <Tabs defaultValue="services" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="services">Services</TabsTrigger>
-              <TabsTrigger value="products">Products</TabsTrigger>
-              <TabsTrigger value="meals">Food & Drinks</TabsTrigger>
-              <TabsTrigger value="team">Team</TabsTrigger>
+          <Tabs defaultValue="performance" className="space-y-6">
+            <TabsList className="grid w-full grid-cols-2 lg:grid-cols-5">
+              <TabsTrigger value="performance" className="text-xs lg:text-sm">Performance</TabsTrigger>
+              <TabsTrigger value="services" className="text-xs lg:text-sm">Services</TabsTrigger>
+              <TabsTrigger value="products" className="text-xs lg:text-sm">Products</TabsTrigger>
+              <TabsTrigger value="meals" className="text-xs lg:text-sm">Food</TabsTrigger>
+              <TabsTrigger value="team" className="text-xs lg:text-sm">Team</TabsTrigger>
             </TabsList>
+
+            <TabsContent value="performance" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center text-lg lg:text-xl">
+                    <BarChart3 className="w-5 h-5 mr-2" />
+                    Artist Performance Intelligence
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {artistPerformance.map((artist) => (
+                      <div key={artist.id} className="flex flex-col lg:flex-row lg:items-center justify-between p-4 border rounded-lg bg-white">
+                        <div className="flex items-center space-x-4 mb-4 lg:mb-0">
+                          <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white font-bold">
+                            {artist.full_name.charAt(0)}
+                          </div>
+                          <div>
+                            <p className="font-semibold text-base lg:text-lg">{artist.full_name}</p>
+                            <div className="flex items-center space-x-2 text-sm text-gray-600">
+                              <Badge 
+                                variant={artist.status === 'available' ? 'default' : 'secondary'}
+                                className="text-xs"
+                              >
+                                {artist.status}
+                              </Badge>
+                              <span className="flex items-center">
+                                <Star className="w-3 h-3 mr-1 text-yellow-500 fill-current" />
+                                {artist.avg_rating}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 text-center">
+                          <div>
+                            <p className="text-lg lg:text-xl font-bold text-blue-600">{artist.bookings_count}</p>
+                            <p className="text-xs text-gray-600">Bookings</p>
+                          </div>
+                          <div>
+                            <p className="text-lg lg:text-xl font-bold text-green-600">KSh {artist.revenue_generated}</p>
+                            <p className="text-xs text-gray-600">Revenue</p>
+                          </div>
+                          <div>
+                            <p className="text-lg lg:text-xl font-bold text-purple-600">{artist.services_offered}</p>
+                            <p className="text-xs text-gray-600">Services</p>
+                          </div>
+                          <div className="col-span-2 lg:col-span-1">
+                            <Button size="sm" variant="outline" className="w-full">
+                              <MessageCircle className="w-3 h-3 mr-1" />
+                              Message
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    
+                    {artistPerformance.length === 0 && (
+                      <div className="text-center py-8 text-gray-500">
+                        <Users className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                        <p>No artists registered yet</p>
+                        <p className="text-sm">Invite artists to join your business</p>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
 
             <TabsContent value="services" className="space-y-4">
               <Card>
@@ -459,7 +558,7 @@ const BusinessDashboard = () => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
                     {services.map((service) => (
                       <Card key={service.id} className="overflow-hidden">
                         {service.image_url && (
@@ -505,7 +604,7 @@ const BusinessDashboard = () => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
                     {products.map((product) => (
                       <Card key={product.id} className="overflow-hidden">
                         {product.image_url && (
@@ -552,7 +651,7 @@ const BusinessDashboard = () => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
                     {meals.map((meal) => (
                       <Card key={meal.id} className="overflow-hidden">
                         {meal.image_url && (
@@ -592,61 +691,20 @@ const BusinessDashboard = () => {
 
             <TabsContent value="team" className="space-y-4">
               <Card>
-                <CardHeader className="flex flex-row items-center justify-between">
+                <CardHeader className="flex flex-col lg:flex-row lg:items-center justify-between space-y-4 lg:space-y-0">
                   <CardTitle className="flex items-center">
                     <Users className="w-5 h-5 mr-2" />
                     Team Management
                   </CardTitle>
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <Button>
-                        <UserPlus className="w-4 h-4 mr-2" />
-                        Add Member
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Add Team Member</DialogTitle>
-                      </DialogHeader>
-                      <div className="space-y-4">
-                        <div>
-                          <Label htmlFor="email">User Email/Name</Label>
-                          <Input
-                            id="email"
-                            value={newTeamMember.email}
-                            onChange={(e) => setNewTeamMember(prev => ({ ...prev, email: e.target.value }))}
-                            placeholder="Enter user email or name..."
-                          />
-                        </div>
-
-                        <div>
-                          <Label>Role</Label>
-                          <Select
-                            value={newTeamMember.role}
-                            onValueChange={(value) => setNewTeamMember(prev => ({ ...prev, role: value }))}
-                          >
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="staff">Staff</SelectItem>
-                              <SelectItem value="manager">Manager</SelectItem>
-                              <SelectItem value="admin">Admin</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        <Button onClick={addTeamMember} className="w-full">
-                          Add Team Member
-                        </Button>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
+                  <Button className="w-full lg:w-auto">
+                    <UserPlus className="w-4 h-4 mr-2" />
+                    Add Member
+                  </Button>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
                     {teamMembers.map((member) => (
-                      <div key={member.id} className="flex items-center justify-between p-4 border rounded-lg">
+                      <div key={member.id} className="flex flex-col lg:flex-row lg:items-center justify-between p-4 border rounded-lg space-y-4 lg:space-y-0">
                         <div>
                           <p className="font-semibold">{member.profiles?.full_name || 'Unknown Member'}</p>
                           <p className="text-sm text-gray-600">{member.profiles?.phone || 'No phone'}</p>
@@ -655,11 +713,11 @@ const BusinessDashboard = () => {
                           </Badge>
                         </div>
                         <div className="flex space-x-2">
-                          <Button size="sm" variant="outline">
+                          <Button size="sm" variant="outline" className="flex-1 lg:flex-none">
                             <Edit className="w-4 h-4 mr-1" />
                             Edit
                           </Button>
-                          <Button size="sm" variant="outline">
+                          <Button size="sm" variant="outline" className="flex-1 lg:flex-none">
                             <Trash2 className="w-4 h-4 mr-1" />
                             Remove
                           </Button>
