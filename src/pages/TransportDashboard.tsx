@@ -36,7 +36,7 @@ interface TransportTask {
   bookings?: {
     client_id: string;
     total_amount: number;
-    profiles: {
+    profiles?: {
       full_name: string;
       phone: string;
     };
@@ -92,7 +92,10 @@ const TransportDashboard = () => {
           bookings (
             client_id,
             total_amount,
-            profiles:client_id (full_name, phone)
+            client_profile:profiles!bookings_client_id_fkey (
+              full_name,
+              phone
+            )
           )
         `)
         .is('driver_id', null)
@@ -100,7 +103,13 @@ const TransportDashboard = () => {
         .order('created_at', { ascending: false });
 
       if (availableData) {
-        setAvailableTasks(availableData as TransportTask[]);
+        setAvailableTasks(availableData.map(task => ({
+          ...task,
+          bookings: task.bookings ? {
+            ...task.bookings,
+            profiles: task.bookings.client_profile as any
+          } : undefined
+        })) as TransportTask[]);
       }
 
       // Fetch my assigned tasks
@@ -111,14 +120,23 @@ const TransportDashboard = () => {
           bookings (
             client_id,
             total_amount,
-            profiles:client_id (full_name, phone)
+            client_profile:profiles!bookings_client_id_fkey (
+              full_name,
+              phone
+            )
           )
         `)
         .eq('driver_id', profile.id)
         .order('created_at', { ascending: false });
 
       if (myTasksData) {
-        setMyTasks(myTasksData as TransportTask[]);
+        setMyTasks(myTasksData.map(task => ({
+          ...task,
+          bookings: task.bookings ? {
+            ...task.bookings,
+            profiles: task.bookings.client_profile as any
+          } : undefined
+        })) as TransportTask[]);
       }
     } catch (error) {
       console.error('Error fetching transport data:', error);

@@ -47,7 +47,7 @@ interface Booking {
   is_group_session: boolean;
   location: string;
   notes: string;
-  profiles: {
+  profiles?: {
     full_name: string;
   };
 }
@@ -100,21 +100,33 @@ const ArtistDashboard = () => {
         .single();
 
       if (availData) {
-        setAvailability(availData);
+        setAvailability(availData as ArtistAvailability);
       }
 
-      // Fetch bookings
+      // Fetch bookings with proper join
       const { data: bookingData } = await supabase
         .from('bookings')
         .select(`
-          *,
-          profiles:client_id (full_name)
+          id,
+          booking_date,
+          status,
+          total_amount,
+          client_id,
+          is_group_session,
+          location,
+          notes,
+          profiles:client_id (
+            full_name
+          )
         `)
         .eq('provider_id', profile.id)
         .order('booking_date', { ascending: false });
 
       if (bookingData) {
-        setBookings(bookingData as Booking[]);
+        setBookings(bookingData.map(booking => ({
+          ...booking,
+          profiles: Array.isArray(booking.profiles) ? booking.profiles[0] : booking.profiles
+        })) as Booking[]);
       }
 
       // Fetch portfolio
@@ -343,7 +355,7 @@ const ArtistDashboard = () => {
                           <div className="flex-1">
                             <div className="flex items-center space-x-4">
                               <div>
-                                <p className="font-semibold">{booking.profiles?.full_name}</p>
+                                <p className="font-semibold">{booking.profiles?.full_name || 'Unknown Client'}</p>
                                 <p className="text-sm text-gray-600">
                                   {new Date(booking.booking_date).toLocaleDateString()} - KSh {booking.total_amount}
                                 </p>

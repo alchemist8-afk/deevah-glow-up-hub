@@ -34,7 +34,7 @@ interface TeamMember {
   member_id: string;
   role: string;
   permissions: any;
-  profiles: {
+  profiles?: {
     full_name: string;
     phone: string;
     user_role: string;
@@ -85,17 +85,27 @@ const BusinessDashboard = () => {
     if (!profile) return;
 
     try {
-      // Fetch team members
+      // Fetch team members with proper join
       const { data: teamData } = await supabase
         .from('business_teams')
         .select(`
-          *,
-          profiles:member_id (full_name, phone, user_role)
+          id,
+          member_id,
+          role,
+          permissions,
+          member_profile:profiles!business_teams_member_id_fkey (
+            full_name,
+            phone,
+            user_role
+          )
         `)
         .eq('business_id', profile.id);
 
       if (teamData) {
-        setTeamMembers(teamData as TeamMember[]);
+        setTeamMembers(teamData.map(member => ({
+          ...member,
+          profiles: member.member_profile as any
+        })) as TeamMember[]);
       }
 
       // Fetch services
@@ -638,8 +648,8 @@ const BusinessDashboard = () => {
                     {teamMembers.map((member) => (
                       <div key={member.id} className="flex items-center justify-between p-4 border rounded-lg">
                         <div>
-                          <p className="font-semibold">{member.profiles.full_name}</p>
-                          <p className="text-sm text-gray-600">{member.profiles.phone}</p>
+                          <p className="font-semibold">{member.profiles?.full_name || 'Unknown Member'}</p>
+                          <p className="text-sm text-gray-600">{member.profiles?.phone || 'No phone'}</p>
                           <Badge variant="outline" className="mt-1">
                             {member.role}
                           </Badge>
