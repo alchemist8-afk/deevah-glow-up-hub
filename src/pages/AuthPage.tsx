@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,10 +11,11 @@ import { useToast } from '@/hooks/use-toast';
 import { Eye, EyeOff, Sparkles } from 'lucide-react';
 
 const AuthPage = () => {
-  const { signUp, signIn, isAuthenticated, profile } = useAuth();
+  const { signUp, signIn, isAuthenticated, profile, isLoading } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [isLogin, setIsLogin] = useState(true);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isAuthLoading, setIsAuthLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   
   // Form states
@@ -24,32 +25,37 @@ const AuthPage = () => {
   const [phone, setPhone] = useState('');
   const [userRole, setUserRole] = useState<UserRole>('client');
 
-  // Redirect based on role after login
+  // Redirect based on role after successful authentication
   useEffect(() => {
-    if (isAuthenticated && profile) {
-      // This will be handled by the redirect logic in the main component
+    if (isAuthenticated && profile && !isLoading) {
+      const redirectPath = getRoleBasedRedirect(profile.user_role);
+      navigate(redirectPath, { replace: true });
     }
-  }, [isAuthenticated, profile]);
+  }, [isAuthenticated, profile, isLoading, navigate]);
 
-  // Redirect if already authenticated
-  if (isAuthenticated && profile) {
-    switch (profile.user_role) {
+  const getRoleBasedRedirect = (role: UserRole): string => {
+    switch (role) {
       case 'client':
-        return <Navigate to="/" replace />;
+        return '/';
       case 'artist':
-        return <Navigate to="/artist-dashboard" replace />;
+        return '/artist-dashboard';
       case 'business':
-        return <Navigate to="/business" replace />;
+        return '/business';
       case 'transport':
-        return <Navigate to="/transport-dashboard" replace />;
+        return '/transport-dashboard';
       default:
-        return <Navigate to="/" replace />;
+        return '/';
     }
+  };
+
+  // Don't show auth page if already authenticated
+  if (isAuthenticated && profile) {
+    return <Navigate to={getRoleBasedRedirect(profile.user_role)} replace />;
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
+    setIsAuthLoading(true);
 
     try {
       if (isLogin) {
@@ -91,7 +97,7 @@ const AuthPage = () => {
         } else {
           toast({
             title: "Welcome to Deevah! 🎉",
-            description: "Your account has been created successfully"
+            description: "Your account has been created successfully. Please check your email to verify your account."
           });
         }
       }
@@ -102,7 +108,7 @@ const AuthPage = () => {
         variant: "destructive"
       });
     } finally {
-      setIsLoading(false);
+      setIsAuthLoading(false);
     }
   };
 
@@ -211,9 +217,9 @@ const AuthPage = () => {
             <Button 
               type="submit" 
               className="w-full bg-[#E07A5F] hover:bg-[#E07A5F]/90"
-              disabled={isLoading}
+              disabled={isAuthLoading}
             >
-              {isLoading ? (
+              {isAuthLoading ? (
                 <div className="flex items-center">
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
                   {isLogin ? 'Signing in...' : 'Creating account...'}
