@@ -1,4 +1,3 @@
-
 import { Layout } from "@/components/Layout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -100,8 +99,6 @@ const allProducts = [
 const categories = ['All', 'Hair Care', 'Skincare', 'Makeup', 'Nails', 'Tools'];
 
 const ProductsPage = () => {
-  const [selectedProduct, setSelectedProduct] = useState<any>(null);
-  const [isBookingOpen, setIsBookingOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [sortBy, setSortBy] = useState('featured');
@@ -127,15 +124,6 @@ const ProductsPage = () => {
         return b.featured ? 1 : -1;
     }
   });
-
-  const handleOrderProduct = (product: any) => {
-    setSelectedProduct({
-      ...product,
-      provider: product.brand,
-      type: 'product' as const
-    });
-    setIsBookingOpen(true);
-  };
 
   return (
     <Layout>
@@ -270,13 +258,19 @@ const ProductsPage = () => {
                       </Badge>
                     </div>
                     
-                    <Button 
-                      className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
-                      onClick={() => handleOrderProduct(product)}
-                      disabled={!product.inStock}
-                    >
-                      {product.inStock ? 'Add to Cart' : 'Notify When Available'}
-                    </Button>
+                    <BookingModal service={{
+                      id: product.id,
+                      name: product.name,
+                      price: product.price,
+                      category: product.category
+                    }}>
+                      <Button 
+                        className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+                        disabled={!product.inStock}
+                      >
+                        {product.inStock ? 'Add to Cart' : 'Notify When Available'}
+                      </Button>
+                    </BookingModal>
                   </CardContent>
                 </Card>
               ))}
@@ -329,29 +323,26 @@ const ProductsPage = () => {
                       )}
                     </div>
                     
-                    <Button 
-                      size="sm" 
-                      className="w-full"
-                      onClick={() => handleOrderProduct(product)}
-                      disabled={!product.inStock}
-                    >
-                      {product.inStock ? 'Add to Cart' : 'Notify Me'}
-                    </Button>
+                    <BookingModal service={{
+                      id: product.id,
+                      name: product.name,
+                      price: product.price,
+                      category: product.category
+                    }}>
+                      <Button 
+                        size="sm" 
+                        className="w-full"
+                        disabled={!product.inStock}
+                      >
+                        {product.inStock ? 'Add to Cart' : 'Notify Me'}
+                      </Button>
+                    </BookingModal>
                   </CardContent>
                 </Card>
               ))}
             </div>
           </div>
         </section>
-
-        {/* Booking Modal */}
-        {selectedProduct && (
-          <BookingModal
-            isOpen={isBookingOpen}
-            onClose={() => setIsBookingOpen(false)}
-            service={selectedProduct}
-          />
-        )}
       </div>
     </Layout>
   );

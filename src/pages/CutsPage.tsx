@@ -1,4 +1,3 @@
-
 import { Layout } from "@/components/Layout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -78,7 +77,8 @@ const popularServices = [
     providerId: 'barber1',
     price: 65,
     duration: '45 min',
-    description: 'Complete grooming experience with precision fade and beard sculpting'
+    description: 'Complete grooming experience with precision fade and beard sculpting',
+    category: 'Cuts'
   },
   {
     id: 'service2',
@@ -87,7 +87,8 @@ const popularServices = [
     providerId: 'barber2',
     price: 40,
     duration: '30 min',
-    description: 'Traditional barbershop experience with hot towel and straight razor'
+    description: 'Traditional barbershop experience with hot towel and straight razor',
+    category: 'Cuts'
   },
   {
     id: 'service3',
@@ -96,22 +97,12 @@ const popularServices = [
     providerId: 'barber3',
     price: 70,
     duration: '1 hour',
-    description: 'Custom hair design with sharp line-up and styling'
+    description: 'Custom hair design with sharp line-up and styling',
+    category: 'Cuts'
   }
 ];
 
 const CutsPage = () => {
-  const [selectedService, setSelectedService] = useState<any>(null);
-  const [isBookingOpen, setIsBookingOpen] = useState(false);
-
-  const handleBookService = (service: any) => {
-    setSelectedService({
-      ...service,
-      type: 'service' as const
-    });
-    setIsBookingOpen(true);
-  };
-
   return (
     <Layout>
       <div className="min-h-screen">
@@ -245,19 +236,16 @@ const CutsPage = () => {
                       </div>
                     </div>
                     
-                    <Button 
-                      className="w-full bg-gradient-to-r from-gray-800 to-black hover:from-gray-700 hover:to-gray-900"
-                      onClick={() => handleBookService({
-                        id: `barber-${barber.id}`,
-                        name: `Session with ${barber.name}`,
-                        provider: barber.name,
-                        providerId: barber.id,
-                        price: barber.price,
-                        duration: '45 min'
-                      })}
-                    >
-                      Book {barber.name}
-                    </Button>
+                    <BookingModal service={{
+                      id: `barber-${barber.id}`,
+                      name: `Session with ${barber.name}`,
+                      price: barber.price,
+                      category: 'Cuts'
+                    }}>
+                      <Button className="w-full bg-gradient-to-r from-gray-800 to-black hover:from-gray-700 hover:to-gray-900">
+                        Book {barber.name}
+                      </Button>
+                    </BookingModal>
                   </CardContent>
                 </Card>
               ))}
@@ -292,27 +280,17 @@ const CutsPage = () => {
                       </span>
                     </div>
                     
-                    <Button 
-                      className="w-full bg-gradient-to-r from-gray-800 to-black hover:from-gray-700 hover:to-gray-900"
-                      onClick={() => handleBookService(service)}
-                    >
-                      Book Service
-                    </Button>
+                    <BookingModal service={service}>
+                      <Button className="w-full bg-gradient-to-r from-gray-800 to-black hover:from-gray-700 hover:to-gray-900">
+                        Book Service
+                      </Button>
+                    </BookingModal>
                   </CardContent>
                 </Card>
               ))}
             </div>
           </div>
         </section>
-
-        {/* Booking Modal */}
-        {selectedService && (
-          <BookingModal
-            isOpen={isBookingOpen}
-            onClose={() => setIsBookingOpen(false)}
-            service={selectedService}
-          />
-        )}
       </div>
     </Layout>
   );

@@ -1,4 +1,3 @@
-
 import { Layout } from "@/components/Layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,12 +28,16 @@ const GlowFeedPage = () => {
   const handleSubmitPost = () => {
     if (!profile || !newPost.image || !newPost.caption) return;
 
-    createPost(
-      newPost.image,
-      newPost.caption,
-      newPost.serviceUsed || undefined,
-      newPost.artistName || undefined
-    );
+    // Create post object matching the expected interface
+    const postData = {
+      image_url: newPost.image,
+      caption: newPost.caption,
+      service_used: newPost.serviceUsed || null,
+      artist_name: newPost.artistName || null,
+      is_group_session: newPost.isGroupSession
+    };
+
+    createPost(postData);
 
     toast({
       title: "Post Shared!",
