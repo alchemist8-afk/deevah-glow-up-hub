@@ -9,6 +9,85 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      artist_availability: {
+        Row: {
+          allows_group_sessions: boolean | null
+          artist_id: string
+          hourly_rate: number | null
+          id: string
+          max_group_size: number | null
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          allows_group_sessions?: boolean | null
+          artist_id: string
+          hourly_rate?: number | null
+          id?: string
+          max_group_size?: number | null
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          allows_group_sessions?: boolean | null
+          artist_id?: string
+          hourly_rate?: number | null
+          id?: string
+          max_group_size?: number | null
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "artist_availability_artist_id_fkey"
+            columns: ["artist_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      artist_portfolio: {
+        Row: {
+          artist_id: string
+          created_at: string | null
+          description: string | null
+          id: string
+          image_url: string
+          is_featured: boolean | null
+          service_category: string | null
+          title: string | null
+        }
+        Insert: {
+          artist_id: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          image_url: string
+          is_featured?: boolean | null
+          service_category?: string | null
+          title?: string | null
+        }
+        Update: {
+          artist_id?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string
+          is_featured?: boolean | null
+          service_category?: string | null
+          title?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "artist_portfolio_artist_id_fkey"
+            columns: ["artist_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bookings: {
         Row: {
           booking_date: string
@@ -79,6 +158,48 @@ export type Database = {
           },
         ]
       }
+      business_teams: {
+        Row: {
+          business_id: string
+          created_at: string | null
+          id: string
+          member_id: string
+          permissions: Json | null
+          role: string | null
+        }
+        Insert: {
+          business_id: string
+          created_at?: string | null
+          id?: string
+          member_id: string
+          permissions?: Json | null
+          role?: string | null
+        }
+        Update: {
+          business_id?: string
+          created_at?: string | null
+          id?: string
+          member_id?: string
+          permissions?: Json | null
+          role?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_teams_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_teams_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       glow_posts: {
         Row: {
           artist_name: string | null
@@ -122,6 +243,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      payment_methods: {
+        Row: {
+          account_name: string | null
+          account_number: string | null
+          bank_name: string | null
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          is_default: boolean | null
+          method_type: string
+          user_id: string
+        }
+        Insert: {
+          account_name?: string | null
+          account_number?: string | null
+          bank_name?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_default?: boolean | null
+          method_type: string
+          user_id: string
+        }
+        Update: {
+          account_name?: string | null
+          account_number?: string | null
+          bank_name?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_default?: boolean | null
+          method_type?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       post_comments: {
         Row: {
@@ -367,13 +524,97 @@ export type Database = {
           },
         ]
       }
+      transport_tasks: {
+        Row: {
+          actual_earnings: number | null
+          booking_id: string | null
+          created_at: string | null
+          delivery_location: string | null
+          driver_id: string | null
+          estimated_earnings: number | null
+          id: string
+          pickup_location: string | null
+          status: string | null
+          task_type: string | null
+        }
+        Insert: {
+          actual_earnings?: number | null
+          booking_id?: string | null
+          created_at?: string | null
+          delivery_location?: string | null
+          driver_id?: string | null
+          estimated_earnings?: number | null
+          id?: string
+          pickup_location?: string | null
+          status?: string | null
+          task_type?: string | null
+        }
+        Update: {
+          actual_earnings?: number | null
+          booking_id?: string | null
+          created_at?: string | null
+          delivery_location?: string | null
+          driver_id?: string | null
+          estimated_earnings?: number | null
+          id?: string
+          pickup_location?: string | null
+          status?: string | null
+          task_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transport_tasks_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transport_tasks_driver_id_fkey"
+            columns: ["driver_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wallet_balances: {
+        Row: {
+          balance_ksh: number | null
+          created_at: string | null
+          glow_coins: number | null
+          id: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          balance_ksh?: number | null
+          created_at?: string | null
+          glow_coins?: number | null
+          id?: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          balance_ksh?: number | null
+          created_at?: string | null
+          glow_coins?: number | null
+          id?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       wallet_transactions: {
         Row: {
           amount: number
           created_at: string | null
+          currency: string | null
           description: string | null
           id: string
           method: string | null
+          payment_method_id: string | null
+          reference_id: string | null
           status: string | null
           type: string
           user_id: string | null
@@ -381,9 +622,12 @@ export type Database = {
         Insert: {
           amount: number
           created_at?: string | null
+          currency?: string | null
           description?: string | null
           id?: string
           method?: string | null
+          payment_method_id?: string | null
+          reference_id?: string | null
           status?: string | null
           type: string
           user_id?: string | null
@@ -391,14 +635,24 @@ export type Database = {
         Update: {
           amount?: number
           created_at?: string | null
+          currency?: string | null
           description?: string | null
           id?: string
           method?: string | null
+          payment_method_id?: string | null
+          reference_id?: string | null
           status?: string | null
           type?: string
           user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "wallet_transactions_payment_method_id_fkey"
+            columns: ["payment_method_id"]
+            isOneToOne: false
+            referencedRelation: "payment_methods"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "wallet_transactions_user_id_fkey"
             columns: ["user_id"]

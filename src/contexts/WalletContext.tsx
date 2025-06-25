@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -7,11 +7,26 @@ import { useToast } from '@/hooks/use-toast';
 export interface WalletTransaction {
   id: string;
   user_id: string;
-  type: 'deposit' | 'withdraw' | 'booking' | 'referral_earning' | 'glow_coins';
+  type: 'deposit' | 'withdraw' | 'booking' | 'referral_earning' | 'glow_coins' | 'tip' | 'refund';
   amount: number;
   method?: string;
   status: 'pending' | 'completed' | 'failed';
   description?: string;
+  created_at: string;
+  currency?: string;
+  reference_id?: string;
+  payment_method_id?: string;
+}
+
+export interface PaymentMethod {
+  id: string;
+  user_id: string;
+  method_type: 'mpesa' | 'bank_account' | 'card';
+  account_number?: string;
+  account_name?: string;
+  bank_name?: string;
+  is_default: boolean;
+  is_active: boolean;
   created_at: string;
 }
 
@@ -19,12 +34,15 @@ interface WalletContextType {
   balance: number;
   glowCoins: number;
   transactions: WalletTransaction[];
+  paymentMethods: PaymentMethod[];
   isLoading: boolean;
-  addTransaction: (transaction: Omit<WalletTransaction, 'id' | 'user_id' | 'created_at'>) => Promise<void>;
-  fetchTransactions: () => Promise<void>;
-  depositFunds: (amount: number, method: string) => Promise<{ success: boolean }>;
-  withdrawFunds: (amount: number, method: string) => Promise<{ success: boolean }>;
+  fetchWalletData: () => Promise<void>;
+  depositFunds: (amount: number, paymentMethodId: string) => Promise<{ success: boolean }>;
+  withdrawFunds: (amount: number, paymentMethodId: string) => Promise<{ success: boolean }>;
+  addPaymentMethod: (method: Omit<PaymentMethod, 'id' | 'user_id' | 'created_at'>) => Promise<void>;
+  removePaymentMethod: (methodId: string) => Promise<void>;
   earnGlowCoins: (amount: number, description: string) => Promise<void>;
+  tipArtist: (artistId: string, amount: number) => Promise<{ success: boolean }>;
 }
 
 const WalletContext = createContext<WalletContextType | undefined>(undefined);
@@ -33,105 +51,115 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const { toast } = useToast();
   const [balance, setBalance] = useState(0);
-  const [glowCoins, setGlowCoins] = useState(50); // Welcome bonus
+  const [glowCoins, setGlowCoins] = useState(50);
   const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  const addTransaction = async (transactionData: Omit<WalletTransaction, 'id' | 'user_id' | 'created_at'>) => {
-    if (!user) return;
-
-    try {
-      const { data, error } = await supabase
-        .from('wallet_transactions')
-        .insert({
-          user_id: user.id,
-          ...transactionData
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      // Type assertion to ensure data matches our interface
-      const typedData = data as WalletTransaction;
-      setTransactions(prev => [typedData, ...prev]);
-
-      // Update balance based on transaction type
-      if (transactionData.type === 'deposit' && transactionData.status === 'completed') {
-        setBalance(prev => prev + transactionData.amount);
-      } else if (transactionData.type === 'withdraw' && transactionData.status === 'completed') {
-        setBalance(prev => prev - transactionData.amount);
-      } else if (transactionData.type === 'glow_coins') {
-        setGlowCoins(prev => prev + transactionData.amount);
-      }
-
-    } catch (error) {
-      console.error('Error adding transaction:', error);
-      toast({
-        title: "Transaction Failed",
-        description: "Failed to process transaction",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const fetchTransactions = async () => {
+  const fetchWalletData = async () => {
     if (!user) return;
 
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
+      // Fetch wallet balance
+      const { data: walletData } = await supabase
+        .from('wallet_balances')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+
+      if (walletData) {
+        setBalance(Number(walletData.balance_ksh) || 0);
+        setGlowCoins(walletData.glow_coins || 50);
+      }
+
+      // Fetch transactions
+      const { data: transactionData } = await supabase
         .from('wallet_transactions')
         .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      
-      // Type assertion to ensure data matches our interface
-      const typedData = (data || []) as WalletTransaction[];
-      setTransactions(typedData);
+      if (transactionData) {
+        setTransactions(transactionData as WalletTransaction[]);
+      }
 
-      // Calculate balance from transactions
-      const totalDeposits = typedData.filter(t => t.type === 'deposit' && t.status === 'completed')
-        .reduce((sum, t) => sum + t.amount, 0);
-      const totalWithdrawals = typedData.filter(t => t.type === 'withdraw' && t.status === 'completed')
-        .reduce((sum, t) => sum + t.amount, 0);
-      const totalEarnings = typedData.filter(t => t.type === 'referral_earning' && t.status === 'completed')
-        .reduce((sum, t) => sum + t.amount, 0);
+      // Fetch payment methods
+      const { data: paymentData } = await supabase
+        .from('payment_methods')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('is_active', true);
 
-      setBalance(totalDeposits - totalWithdrawals + totalEarnings);
-
-      const totalGlowCoins = typedData.filter(t => t.type === 'glow_coins')
-        .reduce((sum, t) => sum + t.amount, 0);
-      setGlowCoins(50 + totalGlowCoins); // 50 is welcome bonus
-
+      if (paymentData) {
+        setPaymentMethods(paymentData as PaymentMethod[]);
+      }
     } catch (error) {
-      console.error('Error fetching transactions:', error);
+      console.error('Error fetching wallet data:', error);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const depositFunds = async (amount: number, method: string) => {
-    await addTransaction({
-      type: 'deposit',
-      amount,
-      method,
-      status: 'completed', // Simulating instant completion
-      description: `Deposit via ${method}`
-    });
+  useEffect(() => {
+    if (user) {
+      fetchWalletData();
+    }
+  }, [user]);
 
-    toast({
-      title: "Deposit Successful!",
-      description: `KSh ${amount} has been added to your wallet`
-    });
+  const depositFunds = async (amount: number, paymentMethodId: string) => {
+    if (!user) return { success: false };
 
-    return { success: true };
+    try {
+      // Create transaction record
+      const { error: txnError } = await supabase
+        .from('wallet_transactions')
+        .insert({
+          user_id: user.id,
+          type: 'deposit',
+          amount,
+          status: 'completed',
+          description: 'Deposit to wallet',
+          currency: 'KSH',
+          payment_method_id: paymentMethodId,
+          reference_id: `DEP_${Date.now()}`
+        });
+
+      if (txnError) throw txnError;
+
+      // Update wallet balance
+      const { error: balanceError } = await supabase
+        .from('wallet_balances')
+        .upsert({
+          user_id: user.id,
+          balance_ksh: balance + amount,
+          glow_coins: glowCoins,
+          updated_at: new Date().toISOString()
+        });
+
+      if (balanceError) throw balanceError;
+
+      await fetchWalletData();
+      
+      toast({
+        title: "Deposit Successful!",
+        description: `KSh ${amount} has been added to your wallet`
+      });
+
+      return { success: true };
+    } catch (error) {
+      console.error('Deposit error:', error);
+      toast({
+        title: "Deposit Failed",
+        description: "Unable to process deposit. Please try again.",
+        variant: "destructive"
+      });
+      return { success: false };
+    }
   };
 
-  const withdrawFunds = async (amount: number, method: string) => {
-    if (balance < amount) {
+  const withdrawFunds = async (amount: number, paymentMethodId: string) => {
+    if (!user || balance < amount) {
       toast({
         title: "Insufficient Funds",
         description: "You don't have enough balance for this withdrawal",
@@ -140,34 +168,193 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       return { success: false };
     }
 
-    await addTransaction({
-      type: 'withdraw',
-      amount,
-      method,
-      status: 'completed',
-      description: `Withdrawal via ${method}`
-    });
+    try {
+      // Create transaction record
+      const { error: txnError } = await supabase
+        .from('wallet_transactions')
+        .insert({
+          user_id: user.id,
+          type: 'withdraw',
+          amount,
+          status: 'completed',
+          description: 'Withdrawal from wallet',
+          currency: 'KSH',
+          payment_method_id: paymentMethodId,
+          reference_id: `WTH_${Date.now()}`
+        });
 
-    toast({
-      title: "Withdrawal Successful!",
-      description: `KSh ${amount} has been withdrawn from your wallet`
-    });
+      if (txnError) throw txnError;
 
-    return { success: true };
+      // Update wallet balance
+      const { error: balanceError } = await supabase
+        .from('wallet_balances')
+        .upsert({
+          user_id: user.id,
+          balance_ksh: balance - amount,
+          glow_coins: glowCoins,
+          updated_at: new Date().toISOString()
+        });
+
+      if (balanceError) throw balanceError;
+
+      await fetchWalletData();
+      
+      toast({
+        title: "Withdrawal Successful!",
+        description: `KSh ${amount} has been withdrawn from your wallet`
+      });
+
+      return { success: true };
+    } catch (error) {
+      console.error('Withdrawal error:', error);
+      toast({
+        title: "Withdrawal Failed",
+        description: "Unable to process withdrawal. Please try again.",
+        variant: "destructive"
+      });
+      return { success: false };
+    }
+  };
+
+  const addPaymentMethod = async (method: Omit<PaymentMethod, 'id' | 'user_id' | 'created_at'>) => {
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from('payment_methods')
+        .insert({
+          user_id: user.id,
+          ...method
+        });
+
+      if (error) throw error;
+
+      await fetchWalletData();
+      
+      toast({
+        title: "Payment Method Added",
+        description: "Your payment method has been successfully added"
+      });
+    } catch (error) {
+      console.error('Error adding payment method:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add payment method",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const removePaymentMethod = async (methodId: string) => {
+    try {
+      const { error } = await supabase
+        .from('payment_methods')
+        .update({ is_active: false })
+        .eq('id', methodId);
+
+      if (error) throw error;
+
+      await fetchWalletData();
+      
+      toast({
+        title: "Payment Method Removed",
+        description: "Payment method has been deactivated"
+      });
+    } catch (error) {
+      console.error('Error removing payment method:', error);
+    }
   };
 
   const earnGlowCoins = async (amount: number, description: string) => {
-    await addTransaction({
-      type: 'glow_coins',
-      amount,
-      status: 'completed',
-      description
-    });
+    if (!user) return;
 
-    toast({
-      title: "GlowCoins Earned! ✨",
-      description: `You earned ${amount} GlowCoins: ${description}`
-    });
+    try {
+      const { error: txnError } = await supabase
+        .from('wallet_transactions')
+        .insert({
+          user_id: user.id,
+          type: 'glow_coins',
+          amount,
+          status: 'completed',
+          description,
+          currency: 'GLOW'
+        });
+
+      if (txnError) throw txnError;
+
+      const { error: balanceError } = await supabase
+        .from('wallet_balances')
+        .upsert({
+          user_id: user.id,
+          balance_ksh: balance,
+          glow_coins: glowCoins + amount,
+          updated_at: new Date().toISOString()
+        });
+
+      if (balanceError) throw balanceError;
+
+      await fetchWalletData();
+      
+      toast({
+        title: "GlowCoins Earned! ✨",
+        description: `You earned ${amount} GlowCoins: ${description}`
+      });
+    } catch (error) {
+      console.error('Error earning glow coins:', error);
+    }
+  };
+
+  const tipArtist = async (artistId: string, amount: number) => {
+    if (!user || balance < amount) {
+      toast({
+        title: "Insufficient Funds",
+        description: "You don't have enough balance to tip this artist",
+        variant: "destructive"
+      });
+      return { success: false };
+    }
+
+    try {
+      // Deduct from sender
+      const { error: senderError } = await supabase
+        .from('wallet_transactions')
+        .insert({
+          user_id: user.id,
+          type: 'tip',
+          amount: -amount,
+          status: 'completed',
+          description: `Tip sent to artist`,
+          currency: 'KSH'
+        });
+
+      if (senderError) throw senderError;
+
+      // Add to artist
+      const { error: artistError } = await supabase
+        .from('wallet_transactions')
+        .insert({
+          user_id: artistId,
+          type: 'tip',
+          amount,
+          status: 'completed',
+          description: `Tip received from client`,
+          currency: 'KSH'
+        });
+
+      if (artistError) throw artistError;
+
+      await fetchWalletData();
+      
+      toast({
+        title: "Tip Sent! 💝",
+        description: `You tipped KSh ${amount} to the artist`
+      });
+
+      return { success: true };
+    } catch (error) {
+      console.error('Tip error:', error);
+      return { success: false };
+    }
   };
 
   return (
@@ -175,12 +362,15 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       balance,
       glowCoins,
       transactions,
+      paymentMethods,
       isLoading,
-      addTransaction,
-      fetchTransactions,
+      fetchWalletData,
       depositFunds,
       withdrawFunds,
-      earnGlowCoins
+      addPaymentMethod,
+      removePaymentMethod,
+      earnGlowCoins,
+      tipArtist
     }}>
       {children}
     </WalletContext.Provider>
