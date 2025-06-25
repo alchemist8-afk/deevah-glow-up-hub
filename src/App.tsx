@@ -9,7 +9,7 @@ import { WalletProvider } from "@/contexts/WalletContext";
 import { BookingProvider } from "@/contexts/BookingContext";
 import { MoodProvider } from "@/contexts/MoodContext";
 import { GlowFeedProvider } from "@/contexts/GlowFeedContext";
-import ProtectedRoute from "@/components/ProtectedRoute";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
 import AuthPage from "./pages/AuthPage";
 import ServicesPage from "./pages/ServicesPage";
