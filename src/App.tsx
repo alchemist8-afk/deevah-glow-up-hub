@@ -20,6 +20,7 @@ import MassagePage from "./pages/MassagePage";
 import NailsPage from "./pages/NailsPage";
 import CutsPage from "./pages/CutsPage";
 import FoodPage from "./pages/FoodPage";
+import RestaurantPage from "./pages/RestaurantPage";
 import WalletPage from "./pages/WalletPage";
 import ArtistDashboard from "./pages/ArtistDashboard";
 import BusinessDashboard from "./pages/BusinessDashboard";
@@ -58,6 +59,7 @@ const App = () => (
                     <Route path="/nails" element={<NailsPage />} />
                     <Route path="/cuts" element={<CutsPage />} />
                     <Route path="/food" element={<FoodPage />} />
+                    <Route path="/restaurant/:id" element={<RestaurantPage />} />
                     
                     {/* Protected Routes */}
                     <Route 
