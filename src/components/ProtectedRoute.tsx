@@ -17,8 +17,11 @@ export function ProtectedRoute({
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-[#E07A5F]"></div>
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-4 border-purple-500 border-t-transparent mx-auto mb-4"></div>
+          <p className="text-purple-600 font-medium">Loading your dashboard...</p>
+        </div>
       </div>
     );
   }
@@ -29,18 +32,8 @@ export function ProtectedRoute({
 
   if (allowedRoles && profile && !allowedRoles.includes(profile.user_role)) {
     // Redirect to appropriate dashboard based on user role
-    switch (profile.user_role) {
-      case 'client':
-        return <Navigate to="/" replace />;
-      case 'artist':
-        return <Navigate to="/artist-dashboard" replace />;
-      case 'business':
-        return <Navigate to="/business" replace />;
-      case 'transport':
-        return <Navigate to="/transport-dashboard" replace />;
-      default:
-        return <Navigate to="/auth" replace />;
-    }
+    const redirectPath = `/dashboard/${profile.user_role}`;
+    return <Navigate to={redirectPath} replace />;
   }
 
   return <>{children}</>;

@@ -13,6 +13,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
 import AuthPage from "./pages/AuthPage";
 import ServicesPage from "./pages/ServicesPage";
+import ProductsPage from "./pages/ProductsPage";
 import BraidsPage from "./pages/BraidsPage";
 import DreadlocksPage from "./pages/DreadlocksPage";
 import MassagePage from "./pages/MassagePage";
@@ -24,8 +25,16 @@ import ArtistDashboard from "./pages/ArtistDashboard";
 import BusinessDashboard from "./pages/BusinessDashboard";
 import TransportDashboard from "./pages/TransportDashboard";
 import ClientDashboard from "./pages/ClientDashboard";
+import NotFound from "./pages/NotFound";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 5, // 5 minutes
+      retry: 1,
+    },
+  },
+});
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -42,12 +51,15 @@ const App = () => (
                     <Route path="/" element={<Index />} />
                     <Route path="/auth" element={<AuthPage />} />
                     <Route path="/services" element={<ServicesPage />} />
+                    <Route path="/products" element={<ProductsPage />} />
                     <Route path="/braids" element={<BraidsPage />} />
                     <Route path="/dreadlocks" element={<DreadlocksPage />} />
                     <Route path="/massage" element={<MassagePage />} />
                     <Route path="/nails" element={<NailsPage />} />
                     <Route path="/cuts" element={<CutsPage />} />
                     <Route path="/food" element={<FoodPage />} />
+                    
+                    {/* Protected Routes */}
                     <Route 
                       path="/wallet" 
                       element={
@@ -59,7 +71,7 @@ const App = () => (
                     <Route 
                       path="/dashboard/client" 
                       element={
-                        <ProtectedRoute>
+                        <ProtectedRoute allowedRoles={['client']}>
                           <ClientDashboard />
                         </ProtectedRoute>
                       } 
@@ -67,7 +79,7 @@ const App = () => (
                     <Route 
                       path="/dashboard/artist" 
                       element={
-                        <ProtectedRoute>
+                        <ProtectedRoute allowedRoles={['artist']}>
                           <ArtistDashboard />
                         </ProtectedRoute>
                       } 
@@ -75,7 +87,7 @@ const App = () => (
                     <Route 
                       path="/dashboard/business" 
                       element={
-                        <ProtectedRoute>
+                        <ProtectedRoute allowedRoles={['business']}>
                           <BusinessDashboard />
                         </ProtectedRoute>
                       } 
@@ -83,11 +95,14 @@ const App = () => (
                     <Route 
                       path="/dashboard/transport" 
                       element={
-                        <ProtectedRoute>
+                        <ProtectedRoute allowedRoles={['transport']}>
                           <TransportDashboard />
                         </ProtectedRoute>
                       } 
                     />
+                    
+                    {/* 404 Route */}
+                    <Route path="*" element={<NotFound />} />
                   </Routes>
                 </TooltipProvider>
               </GlowFeedProvider>

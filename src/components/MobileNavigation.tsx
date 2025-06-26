@@ -57,22 +57,22 @@ const MobileNavigation = () => {
   const navItems = getNavItems();
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t shadow-lg lg:hidden">
-      <div className="flex items-center justify-around py-2">
+    <div className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-t border-gray-200 shadow-xl lg:hidden">
+      <div className="flex items-center justify-around py-2 px-2">
         {navItems.map((item) => (
           <Link
             key={item.title}
             to={item.url}
-            className={`flex flex-col items-center p-3 rounded-lg transition-colors ${
+            className={`flex flex-col items-center p-3 rounded-xl transition-all duration-200 min-w-0 flex-1 ${
               location.pathname === item.url
-                ? 'text-purple-600 bg-purple-50'
+                ? 'text-purple-600 bg-purple-50 scale-105'
                 : 'text-gray-600 hover:text-purple-600 hover:bg-gray-50'
             }`}
           >
-            <item.icon className="w-5 h-5 mb-1" />
-            <span className="text-xs font-medium">{item.title}</span>
+            <item.icon className="w-5 h-5 mb-1 flex-shrink-0" />
+            <span className="text-xs font-medium truncate">{item.title}</span>
             {item.title === 'Wallet' && (
-              <Badge variant="secondary" className="text-xs mt-1">
+              <Badge variant="secondary" className="text-xs mt-1 scale-75">
                 0
               </Badge>
             )}

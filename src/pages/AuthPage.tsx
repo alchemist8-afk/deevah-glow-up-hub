@@ -9,7 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { useAuth, UserRole } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { Eye, EyeOff, Sparkles } from 'lucide-react';
+import { Eye, EyeOff, Sparkles, ArrowLeft } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 const AuthPage = () => {
   const { signUp, signIn, isAuthenticated, profile, isLoading } = useAuth();
@@ -37,8 +38,7 @@ const AuthPage = () => {
   useEffect(() => {
     if (isAuthenticated && profile && !isLoading) {
       const redirectPath = getRoleBasedRedirect(profile.user_role);
-      // Use replace to prevent going back to auth page
-      window.location.href = redirectPath;
+      navigate(redirectPath, { replace: true });
     }
   }, [isAuthenticated, profile, isLoading, navigate]);
 
@@ -108,10 +108,6 @@ const AuthPage = () => {
             title: "Welcome to Deevah! 🎉",
             description: "Your account has been created successfully."
           });
-          // Auto-redirect after successful signup
-          setTimeout(() => {
-            window.location.href = getRoleBasedRedirect(userRole);
-          }, 1000);
         }
       }
     } catch (error: any) {
@@ -126,17 +122,27 @@ const AuthPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#F4F1DE] to-[#E07A5F]/20 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md mx-auto">
-        <CardHeader className="text-center">
-          <div className="flex items-center justify-center mb-4">
-            <Sparkles className="w-8 h-8 text-[#E07A5F] mr-2" />
-            <h1 className="text-2xl font-bold text-gray-900">Deevah Glow Hub</h1>
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-orange-50 flex items-center justify-center p-4">
+      {/* Back to home button */}
+      <Link 
+        to="/" 
+        className="fixed top-6 left-6 z-50 flex items-center gap-2 text-purple-600 hover:text-purple-700 transition-colors"
+      >
+        <ArrowLeft className="w-5 h-5" />
+        <span className="font-medium">Back to Home</span>
+      </Link>
+
+      <Card className="w-full max-w-md mx-auto shadow-2xl border-0 bg-white/80 backdrop-blur-sm">
+        <CardHeader className="text-center pb-8">
+          <div className="flex items-center justify-center mb-6">
+            <div className="p-3 bg-gradient-to-r from-purple-600 to-pink-600 rounded-2xl">
+              <Sparkles className="w-8 h-8 text-white" />
+            </div>
           </div>
-          <CardTitle className="text-xl">
-            {isLogin ? 'Welcome Back' : 'Join the Glow Community'}
+          <CardTitle className="text-2xl font-bold text-gray-900">
+            {isLogin ? 'Welcome Back' : 'Join Deevah'}
           </CardTitle>
-          <p className="text-gray-600">
+          <p className="text-gray-600 mt-2">
             {isLogin 
               ? 'Sign in to continue your glow journey' 
               : 'Create your account and start glowing'
@@ -144,12 +150,12 @@ const AuthPage = () => {
           </p>
         </CardHeader>
         
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+        <CardContent className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-5">
             {!isLogin && (
               <>
                 <div className="space-y-2">
-                  <Label htmlFor="fullName">Full Name *</Label>
+                  <Label htmlFor="fullName" className="text-sm font-medium text-gray-700">Full Name *</Label>
                   <Input
                     id="fullName"
                     type="text"
@@ -157,26 +163,26 @@ const AuthPage = () => {
                     onChange={(e) => setFullName(e.target.value)}
                     placeholder="Enter your full name"
                     required
-                    className="h-12 text-base" // Larger for mobile
+                    className="h-12 text-base border-gray-200 focus:border-purple-500 focus:ring-purple-500"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="phone">Phone Number</Label>
+                  <Label htmlFor="phone" className="text-sm font-medium text-gray-700">Phone Number</Label>
                   <Input
                     id="phone"
                     type="tel"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     placeholder="Enter your phone number"
-                    className="h-12 text-base"
+                    className="h-12 text-base border-gray-200 focus:border-purple-500 focus:ring-purple-500"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="role">I am a... *</Label>
+                  <Label htmlFor="role" className="text-sm font-medium text-gray-700">I am a... *</Label>
                   <Select value={userRole} onValueChange={(value: UserRole) => setUserRole(value)}>
-                    <SelectTrigger className="h-12 text-base">
+                    <SelectTrigger className="h-12 text-base border-gray-200 focus:border-purple-500 focus:ring-purple-500">
                       <SelectValue placeholder="Select your role" />
                     </SelectTrigger>
                     <SelectContent>
@@ -191,7 +197,7 @@ const AuthPage = () => {
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email" className="text-sm font-medium text-gray-700">Email</Label>
               <Input
                 id="email"
                 type="email"
@@ -199,12 +205,12 @@ const AuthPage = () => {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="Enter your email"
                 required
-                className="h-12 text-base"
+                className="h-12 text-base border-gray-200 focus:border-purple-500 focus:ring-purple-500"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password" className="text-sm font-medium text-gray-700">Password</Label>
               <div className="relative">
                 <Input
                   id="password"
@@ -213,7 +219,7 @@ const AuthPage = () => {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Enter your password"
                   required
-                  className="h-12 text-base pr-12"
+                  className="h-12 text-base pr-12 border-gray-200 focus:border-purple-500 focus:ring-purple-500"
                 />
                 <Button
                   type="button"
@@ -246,7 +252,7 @@ const AuthPage = () => {
 
             <Button 
               type="submit" 
-              className="w-full h-12 text-base bg-[#E07A5F] hover:bg-[#E07A5F]/90"
+              className="w-full h-12 text-base bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 shadow-lg hover:shadow-xl transition-all duration-300"
               disabled={isAuthLoading}
             >
               {isAuthLoading ? (
@@ -267,7 +273,7 @@ const AuthPage = () => {
             <Button
               variant="link"
               onClick={() => setIsLogin(!isLogin)}
-              className="text-[#E07A5F] hover:text-[#E07A5F]/80"
+              className="text-purple-600 hover:text-purple-700 font-medium"
             >
               {isLogin ? 'Sign up here' : 'Sign in instead'}
             </Button>
