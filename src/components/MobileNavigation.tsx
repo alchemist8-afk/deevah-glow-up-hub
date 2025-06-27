@@ -1,83 +1,116 @@
 
-import { Home, Star, ShoppingBag, UtensilsCrossed, Wallet, User, Calendar, TrendingUp, Truck } from "lucide-react";
-import { Link, useLocation } from "react-router-dom";
+import { Home, Sparkles, Calendar, Wallet, User, Car, Coffee, Package, LogOut } from "lucide-react";
+import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { Badge } from "@/components/ui/badge";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { Button } from "@/components/ui/button";
 
 const MobileNavigation = () => {
-  const location = useLocation();
-  const { profile } = useAuth();
-  const isMobile = useIsMobile();
+  const { isAuthenticated, profile, signOut } = useAuth();
+  const navigate = useNavigate();
 
-  if (!isMobile) return null;
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      navigate("/");
+    } catch (error) {
+      console.error("Sign out error:", error);
+    }
+  };
 
   const getNavItems = () => {
-    if (!profile) {
+    if (!isAuthenticated) {
       return [
-        { title: "Home", url: "/", icon: Home },
-        { title: "Services", url: "/services", icon: Star },
-        { title: "Food", url: "/food", icon: UtensilsCrossed },
-        { title: "Login", url: "/auth", icon: User },
+        { icon: Home, label: "Home", path: "/" },
+        { icon: Sparkles, label: "Services", path: "/services" },
+        { icon: Coffee, label: "Food", path: "/food" },
+        { icon: Package, label: "Shop", path: "/products" },
+        { icon: Car, label: "Rides", path: "/" },
       ];
     }
 
-    switch (profile.user_role) {
+    // Authenticated user navigation based on role
+    const baseItems = [
+      { icon: Home, label: "Home", path: "/" },
+      { icon: User, label: "Dashboard", path: `/dashboard/${profile?.user_role}` },
+    ];
+
+    switch (profile?.user_role) {
+      case 'client':
+        return [
+          ...baseItems,
+          { icon: Calendar, label: "Bookings", path: "/bookings" },
+          { icon: Car, label: "Rides", path: "/rides" },
+          { icon: Wallet, label: "Wallet", path: "/wallet" },
+        ];
       case 'artist':
         return [
-          { title: "Dashboard", url: "/dashboard/artist", icon: Home },
-          { title: "Bookings", url: "/artist-bookings", icon: Calendar },
-          { title: "Portfolio", url: "/artist-portfolio", icon: Star },
-          { title: "Wallet", url: "/wallet", icon: Wallet },
+          ...baseItems,
+          { icon: Calendar, label: "Bookings", path: "/bookings" },
+          { icon: Sparkles, label: "Portfolio", path: "/glow-feed" },
+          { icon: Wallet, label: "Wallet", path: "/wallet" },
         ];
       case 'business':
         return [
-          { title: "Business", url: "/dashboard/business", icon: Home },
-          { title: "Analytics", url: "/business-analytics", icon: TrendingUp },
-          { title: "Products", url: "/business-products", icon: ShoppingBag },
-          { title: "Wallet", url: "/wallet", icon: Wallet },
+          ...baseItems,
+          { icon: Package, label: "Products", path: "/products" },
+          { icon: Calendar, label: "Orders", path: "/bookings" },
+          { icon: Wallet, label: "Wallet", path: "/wallet" },
         ];
       case 'transport':
         return [
-          { title: "Dashboard", url: "/dashboard/transport", icon: Home },
-          { title: "Deliveries", url: "/transport-deliveries", icon: Truck },
-          { title: "Earnings", url: "/transport-earnings", icon: TrendingUp },
-          { title: "Wallet", url: "/wallet", icon: Wallet },
+          ...baseItems,
+          { icon: Car, label: "Rides", path: "/rides" },
+          { icon: Wallet, label: "Earnings", path: "/wallet" },
         ];
       default:
-        return [
-          { title: "Home", url: "/", icon: Home },
-          { title: "Services", url: "/services", icon: Star },
-          { title: "Food", url: "/food", icon: UtensilsCrossed },
-          { title: "Wallet", url: "/wallet", icon: Wallet },
-        ];
+        return baseItems;
     }
   };
 
   const navItems = getNavItems();
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-t border-gray-200 shadow-xl lg:hidden">
-      <div className="flex items-center justify-around py-2 px-2">
-        {navItems.map((item) => (
-          <Link
-            key={item.title}
-            to={item.url}
-            className={`flex flex-col items-center p-3 rounded-xl transition-all duration-200 min-w-0 flex-1 ${
-              location.pathname === item.url
-                ? 'text-purple-600 bg-purple-50 scale-105'
-                : 'text-gray-600 hover:text-purple-600 hover:bg-gray-50'
-            }`}
+    <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50">
+      <div className="grid grid-cols-5 h-16">
+        {navItems.slice(0, 4).map((item, index) => (
+          <NavLink
+            key={index}
+            to={item.path}
+            className={({ isActive }) =>
+              `flex flex-col items-center justify-center space-y-1 transition-colors ${
+                isActive
+                  ? "text-purple-600 bg-purple-50"
+                  : "text-gray-600 hover:text-gray-900"
+              }`
+            }
           >
-            <item.icon className="w-5 h-5 mb-1 flex-shrink-0" />
-            <span className="text-xs font-medium truncate">{item.title}</span>
-            {item.title === 'Wallet' && (
-              <Badge variant="secondary" className="text-xs mt-1 scale-75">
-                0
-              </Badge>
-            )}
-          </Link>
+            <item.icon className="w-5 h-5" />
+            <span className="text-xs font-medium">{item.label}</span>
+          </NavLink>
         ))}
+        
+        {/* Profile/Auth section */}
+        <div className="flex flex-col items-center justify-center space-y-1 text-gray-600">
+          {isAuthenticated ? (
+            <Button
+              onClick={handleSignOut}
+              variant="ghost"
+              size="sm"
+              className="flex flex-col items-center space-y-1 h-auto p-1"
+            >
+              <LogOut className="w-5 h-5" />
+              <span className="text-xs font-medium">Sign Out</span>
+            </Button>
+          ) : (
+            <NavLink
+              to="/auth"
+              className="flex flex-col items-center justify-center space-y-1 transition-colors hover:text-gray-900"
+            >
+              <User className="w-5 h-5" />
+              <span className="text-xs font-medium">Sign In</span>
+            </NavLink>
+          )}
+        </div>
       </div>
     </div>
   );

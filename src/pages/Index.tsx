@@ -13,6 +13,7 @@ import { DeevahShopSection } from "@/components/DeevahShopSection";
 import { PastGlowsSection } from "@/components/PastGlowsSection";
 import { WalletCard } from "@/components/WalletCard";
 import { CreatePostModal } from "@/components/CreatePostModal";
+import { DeevahRidesSection } from "@/components/DeevahRidesSection";
 import { useMood } from "@/contexts/MoodContext";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -51,7 +52,7 @@ const Index = () => {
                     <h3 className="text-xl font-semibold text-gray-900">
                       Welcome back, {profile?.full_name}!
                     </h3>
-                    <div className="flex gap-4 justify-center">
+                    <div className="flex gap-4 justify-center flex-wrap">
                       {profile?.user_role === 'artist' && <CreatePostModal />}
                       <a href={`/dashboard/${profile?.user_role}`}>
                         <button className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded-lg font-medium transition-colors">
@@ -67,16 +68,21 @@ const Index = () => {
         )}
 
         <div className="bg-gradient-to-b from-white to-gray-50">
+          {/* Always show core sections */}
+          <ServicesCategories />
+          
+          {/* Deevah Rides Section - Always visible */}
+          <DeevahRidesSection />
+          
           {/* Dynamic Content Based on Mood */}
           {selectedMood ? (
             <div className="space-y-8">
-              <ServicesCategories />
               <GrabABiteSection />
               <DeevahShopSection />
+              <GlowFeed />
             </div>
           ) : (
             <div className="space-y-8">
-              <ServicesCategories />
               <TrendingCutsSection />
               <GrabABiteSection />
               <DeevahShopSection />

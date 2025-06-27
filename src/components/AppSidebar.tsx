@@ -1,7 +1,9 @@
 
-import { Calendar, Home, Scissors, ShoppingBag, Gamepad2, UtensilsCrossed, LogIn, Star, LogOut, User, Settings, Wallet, Share2, Camera, Users, Truck, BookOpen, Upload, TrendingUp, Package } from "lucide-react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useState } from "react";
+import { Calendar, Car, Coffee, Home, LogOut, Package, Sparkles, Star, Users, Wallet } from "lucide-react";
+import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { Button } from "@/components/ui/button";
 import {
   Sidebar,
   SidebarContent,
@@ -14,115 +16,118 @@ import {
   SidebarHeader,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 
-// Client menu items
-const clientMenuItems = [
+const publicItems = [
   { title: "Home", url: "/", icon: Home },
   { title: "Services", url: "/services", icon: Star },
-  { title: "Products", url: "/products", icon: ShoppingBag },
-  { title: "Grab a Bite", url: "/food", icon: UtensilsCrossed },
-  { title: "Game Night", url: "/games", icon: Gamepad2 },
-  { title: "Deevah Cuts", url: "/cuts", icon: Scissors },
-  { title: "Glow Feed", url: "/glow-feed", icon: Camera }
+  { title: "Glow Feed", url: "/glow-feed", icon: Sparkles },
+  { title: "Food & Dining", url: "/food", icon: Coffee },
+  { title: "Shop", url: "/products", icon: Package },
+  { title: "Transport", url: "/transport", icon: Car },
 ];
 
-// Artist menu items
-const artistMenuItems = [
-  { title: "Dashboard", url: "/artist-dashboard", icon: Home },
-  { title: "My Bookings", url: "/artist-bookings", icon: Calendar },
-  { title: "My Profile", url: "/artist-profile", icon: User },
-  { title: "Upload Work", url: "/artist-portfolio", icon: Upload },
-  { title: "Earnings", url: "/artist-earnings", icon: TrendingUp },
-  { title: "Glow Feed", url: "/glow-feed", icon: Camera }
+const clientItems = [
+  { title: "Dashboard", url: "/dashboard/client", icon: Home },
+  { title: "My Bookings", url: "/bookings", icon: Calendar },
+  { title: "Wallet", url: "/wallet", icon: Wallet },
+  { title: "Glow Feed", url: "/glow-feed", icon: Sparkles },
+  { title: "Referrals", url: "/referrals", icon: Users },
 ];
 
-// Business owner menu items
-const businessMenuItems = [
-  { title: "Business Hub", url: "/business", icon: Home },
-  { title: "Upload Products", url: "/business-products", icon: Package },
-  { title: "Upload Meals", url: "/business-meals", icon: UtensilsCrossed },
-  { title: "Upload Services", url: "/business-services", icon: Star },
-  { title: "View Team", url: "/business-team", icon: Users },
-  { title: "Analytics", url: "/business-analytics", icon: TrendingUp }
+const artistItems = [
+  { title: "Dashboard", url: "/dashboard/artist", icon: Home },
+  { title: "My Services", url: "/services", icon: Star },
+  { title: "Bookings", url: "/bookings", icon: Calendar },
+  { title: "Portfolio", url: "/glow-feed", icon: Sparkles },
+  { title: "Wallet", url: "/wallet", icon: Wallet },
 ];
 
-// Transport provider menu items
-const transportMenuItems = [
-  { title: "Transport Dashboard", url: "/transport-dashboard", icon: Home },
-  { title: "My Deliveries", url: "/transport-deliveries", icon: Truck },
-  { title: "Route Planner", url: "/transport-routes", icon: BookOpen },
-  { title: "Earnings", url: "/transport-earnings", icon: TrendingUp }
+const businessItems = [
+  { title: "Dashboard", url: "/dashboard/business", icon: Home },
+  { title: "Products", url: "/products", icon: Package },
+  { title: "Orders", url: "/orders", icon: Calendar },
+  { title: "Wallet", url: "/wallet", icon: Wallet },
 ];
 
-const userMenuItems = [
-  { title: "Wallet", url: "/wallet", icon: Wallet, roles: ['client', 'artist', 'business', 'transport'] },
-  { title: "Referrals", url: "/referrals", icon: Share2, roles: ['client', 'artist', 'business', 'transport'] }
+const transportItems = [
+  { title: "Dashboard", url: "/dashboard/transport", icon: Home },
+  { title: "Active Rides", url: "/rides", icon: Car },
+  { title: "Earnings", url: "/wallet", icon: Wallet },
 ];
 
 export function AppSidebar() {
-  const location = useLocation();
+  const { isAuthenticated, profile, signOut } = useAuth();
   const navigate = useNavigate();
-  const { profile, isAuthenticated, signOut } = useAuth();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-  const handleLogout = () => {
-    signOut();
-    navigate('/');
+  const handleSignOut = async () => {
+    setIsLoggingOut(true);
+    try {
+      await signOut();
+      navigate("/");
+    } catch (error) {
+      console.error("Sign out error:", error);
+    } finally {
+      setIsLoggingOut(false);
+    }
   };
 
-  // Get menu items based on user role
   const getMenuItems = () => {
-    if (!profile) return clientMenuItems;
+    if (!isAuthenticated) return publicItems;
     
-    switch (profile.user_role) {
-      case 'artist':
-        return artistMenuItems;
-      case 'business':
-        return businessMenuItems;
-      case 'transport':
-        return transportMenuItems;
-      default:
-        return clientMenuItems;
+    switch (profile?.user_role) {
+      case 'client': return clientItems;
+      case 'artist': return artistItems;
+      case 'business': return businessItems;
+      case 'transport': return transportItems;
+      default: return publicItems;
     }
   };
 
   const menuItems = getMenuItems();
 
   return (
-    <Sidebar className="border-r border-border/50">
+    <Sidebar className="border-r border-gray-200">
       <SidebarHeader className="p-6">
-        <Link to="/" className="flex items-center space-x-2">
+        <NavLink to="/" className="flex items-center space-x-2">
           <div className="w-8 h-8 bg-gradient-to-r from-purple-600 to-pink-600 rounded-lg flex items-center justify-center">
-            <Star className="w-5 h-5 text-white" />
+            <Sparkles className="w-5 h-5 text-white" />
           </div>
-          <span className="text-xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">Deevah</span>
-        </Link>
+          <span className="text-xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+            Deevah
+          </span>
+        </NavLink>
+        {isAuthenticated && profile && (
+          <div className="mt-4 p-3 bg-gray-50 rounded-lg">
+            <p className="text-sm font-medium text-gray-900">{profile.full_name}</p>
+            <p className="text-xs text-gray-500 capitalize">{profile.user_role}</p>
+          </div>
+        )}
       </SidebarHeader>
-      
+
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel className="text-sm font-medium text-muted-foreground px-6">
-            {profile?.user_role === 'client' ? 'Explore' : 
-             profile?.user_role === 'artist' ? 'Artist Tools' :
-             profile?.user_role === 'business' ? 'Business Tools' :
-             profile?.user_role === 'transport' ? 'Transport Hub' : 'Explore'}
+          <SidebarGroupLabel>
+            {isAuthenticated ? "Dashboard" : "Explore"}
           </SidebarGroupLabel>
-          <SidebarGroupContent className="px-3">
+          <SidebarGroupContent>
             <SidebarMenu>
               {menuItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild className="w-full">
-                    <Link 
-                      to={item.url} 
-                      className={`flex items-center space-x-3 px-3 py-2 rounded-lg hover:bg-accent transition-colors ${
-                        location.pathname === item.url ? 'bg-accent text-accent-foreground' : ''
-                      }`}
+                  <SidebarMenuButton asChild>
+                    <NavLink
+                      to={item.url}
+                      className={({ isActive }) =>
+                        `flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors ${
+                          isActive
+                            ? "bg-purple-100 text-purple-600 font-medium"
+                            : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                        }`
+                      }
                     >
                       <item.icon className="w-5 h-5" />
                       <span>{item.title}</span>
-                    </Link>
+                    </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
@@ -130,83 +135,46 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* User Menu - Only show if authenticated */}
-        {isAuthenticated && profile && (
+        {/* Quick Actions for authenticated users */}
+        {isAuthenticated && (
           <SidebarGroup>
-            <SidebarGroupLabel className="text-sm font-medium text-muted-foreground px-6">
-              Your Account
-            </SidebarGroupLabel>
-            <SidebarGroupContent className="px-3">
+            <SidebarGroupLabel>Quick Actions</SidebarGroupLabel>
+            <SidebarGroupContent>
               <SidebarMenu>
-                {userMenuItems
-                  .filter(item => item.roles.includes(profile.user_role))
-                  .map((item) => (
-                    <SidebarMenuItem key={item.title}>
-                      <SidebarMenuButton asChild className="w-full">
-                        <Link 
-                          to={item.url}
-                          className={`flex items-center justify-between px-3 py-2 rounded-lg hover:bg-accent transition-colors ${
-                            location.pathname === item.url ? 'bg-accent text-accent-foreground' : ''
-                          }`}
-                        >
-                          <div className="flex items-center space-x-3">
-                            <item.icon className="w-5 h-5" />
-                            <span>{item.title}</span>
-                          </div>
-                          {item.title === 'Wallet' && (
-                            <Badge variant="secondary" className="text-xs">
-                              0
-                            </Badge>
-                          )}
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ))}
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild>
+                    <NavLink
+                      to="/"
+                      className="flex items-center space-x-3 px-3 py-2 rounded-lg text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors"
+                    >
+                      <Home className="w-5 h-5" />
+                      <span>Back to Home</span>
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
         )}
       </SidebarContent>
 
-      <SidebarFooter className="p-6">
-        {isAuthenticated && profile ? (
-          <div className="space-y-3">
-            <div className="flex items-center space-x-3 p-3 bg-accent/50 rounded-lg">
-              <Avatar className="w-8 h-8">
-                <AvatarImage src={profile.avatar_url} />
-                <AvatarFallback>
-                  {profile.full_name.split(' ').map(n => n[0]).join('')}
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex-1 min-w-0">
-                <p className="font-medium text-sm truncate">{profile.full_name}</p>
-                <div className="flex items-center space-x-2">
-                  <p className="text-xs text-muted-foreground capitalize">{profile.user_role}</p>
-                  <Badge variant="secondary" className="text-xs px-1 py-0">
-                    ✓
-                  </Badge>
-                </div>
-              </div>
-            </div>
-            <Button 
-              variant="outline" 
-              className="w-full" 
-              onClick={handleLogout}
-            >
-              <LogOut className="w-4 h-4 mr-2" />
-              Logout
-            </Button>
-          </div>
+      <SidebarFooter className="p-4">
+        {isAuthenticated ? (
+          <Button
+            onClick={handleSignOut}
+            disabled={isLoggingOut}
+            variant="outline"
+            className="w-full flex items-center space-x-2"
+          >
+            <LogOut className="w-4 h-4" />
+            <span>{isLoggingOut ? "Signing out..." : "Sign Out"}</span>
+          </Button>
         ) : (
-          <SidebarMenuButton asChild className="w-full">
-            <Link 
-              to="/auth" 
-              className="flex items-center space-x-3 px-4 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:opacity-90 transition-opacity"
-            >
-              <LogIn className="w-5 h-5" />
-              <span>Login / Signup</span>
-            </Link>
-          </SidebarMenuButton>
+          <NavLink to="/auth">
+            <Button className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700">
+              Sign In
+            </Button>
+          </NavLink>
         )}
       </SidebarFooter>
     </Sidebar>
