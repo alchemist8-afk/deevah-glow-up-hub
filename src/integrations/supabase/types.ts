@@ -90,51 +90,73 @@ export type Database = {
       }
       bookings: {
         Row: {
+          artist_id: string | null
           booking_date: string
           client_id: string | null
           created_at: string | null
+          escrow_held: boolean | null
           id: string
           is_group_session: boolean | null
           location: string | null
+          location_details: string | null
+          location_type: string | null
           max_guests: number | null
           mood: string | null
           notes: string | null
+          price: number | null
           provider_id: string | null
           service_id: string | null
           status: string | null
           total_amount: number
         }
         Insert: {
+          artist_id?: string | null
           booking_date: string
           client_id?: string | null
           created_at?: string | null
+          escrow_held?: boolean | null
           id?: string
           is_group_session?: boolean | null
           location?: string | null
+          location_details?: string | null
+          location_type?: string | null
           max_guests?: number | null
           mood?: string | null
           notes?: string | null
+          price?: number | null
           provider_id?: string | null
           service_id?: string | null
           status?: string | null
           total_amount: number
         }
         Update: {
+          artist_id?: string | null
           booking_date?: string
           client_id?: string | null
           created_at?: string | null
+          escrow_held?: boolean | null
           id?: string
           is_group_session?: boolean | null
           location?: string | null
+          location_details?: string | null
+          location_type?: string | null
           max_guests?: number | null
           mood?: string | null
           notes?: string | null
+          price?: number | null
           provider_id?: string | null
           service_id?: string | null
           status?: string | null
           total_amount?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "bookings_artist_id_fkey"
+            columns: ["artist_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "bookings_client_id_fkey"
             columns: ["client_id"]
@@ -202,42 +224,213 @@ export type Database = {
       }
       glow_posts: {
         Row: {
+          artist_id: string | null
           artist_name: string | null
           caption: string | null
           created_at: string | null
+          description: string | null
           id: string
           image_url: string
           is_group_session: boolean | null
           likes_count: number | null
+          mood_tags: string[] | null
           service_used: string | null
           user_id: string | null
         }
         Insert: {
+          artist_id?: string | null
           artist_name?: string | null
           caption?: string | null
           created_at?: string | null
+          description?: string | null
           id?: string
           image_url: string
           is_group_session?: boolean | null
           likes_count?: number | null
+          mood_tags?: string[] | null
           service_used?: string | null
           user_id?: string | null
         }
         Update: {
+          artist_id?: string | null
           artist_name?: string | null
           caption?: string | null
           created_at?: string | null
+          description?: string | null
           id?: string
           image_url?: string
           is_group_session?: boolean | null
           likes_count?: number | null
+          mood_tags?: string[] | null
           service_used?: string | null
           user_id?: string | null
         }
         Relationships: [
           {
+            foreignKeyName: "glow_posts_artist_id_fkey"
+            columns: ["artist_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "glow_posts_user_id_fkey"
             columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      group_session_guests: {
+        Row: {
+          guest_id: string | null
+          id: string
+          joined_at: string | null
+          session_id: string | null
+        }
+        Insert: {
+          guest_id?: string | null
+          id?: string
+          joined_at?: string | null
+          session_id?: string | null
+        }
+        Update: {
+          guest_id?: string | null
+          id?: string
+          joined_at?: string | null
+          session_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_session_guests_guest_id_fkey"
+            columns: ["guest_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "group_session_guests_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "group_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      group_sessions: {
+        Row: {
+          artist_id: string | null
+          created_at: string | null
+          current_guests: number | null
+          description: string | null
+          host_id: string | null
+          id: string
+          location: string
+          max_guests: number
+          mood_vibe: string | null
+          price_per_person: number
+          service_type: string
+          session_date: string
+          status: string | null
+          title: string
+        }
+        Insert: {
+          artist_id?: string | null
+          created_at?: string | null
+          current_guests?: number | null
+          description?: string | null
+          host_id?: string | null
+          id?: string
+          location: string
+          max_guests: number
+          mood_vibe?: string | null
+          price_per_person: number
+          service_type: string
+          session_date: string
+          status?: string | null
+          title: string
+        }
+        Update: {
+          artist_id?: string | null
+          created_at?: string | null
+          current_guests?: number | null
+          description?: string | null
+          host_id?: string | null
+          id?: string
+          location?: string
+          max_guests?: number
+          mood_vibe?: string | null
+          price_per_person?: number
+          service_type?: string
+          session_date?: string
+          status?: string | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_sessions_artist_id_fkey"
+            columns: ["artist_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "group_sessions_host_id_fkey"
+            columns: ["host_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meals: {
+        Row: {
+          category: string
+          created_at: string | null
+          description: string | null
+          id: string
+          image_url: string | null
+          is_available: boolean | null
+          mood_tags: string[] | null
+          name: string
+          prep_time: number | null
+          price: number
+          restaurant_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          category: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_available?: boolean | null
+          mood_tags?: string[] | null
+          name: string
+          prep_time?: number | null
+          price: number
+          restaurant_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_available?: boolean | null
+          mood_tags?: string[] | null
+          name?: string
+          prep_time?: number | null
+          price?: number
+          restaurant_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meals_restaurant_id_fkey"
+            columns: ["restaurant_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -362,9 +555,12 @@ export type Database = {
           description: string | null
           id: string
           image_url: string | null
+          is_active: boolean | null
+          mood_tags: string[] | null
           name: string
           price: number
           provider_id: string | null
+          seller_id: string | null
           stock_quantity: number | null
         }
         Insert: {
@@ -373,9 +569,12 @@ export type Database = {
           description?: string | null
           id?: string
           image_url?: string | null
+          is_active?: boolean | null
+          mood_tags?: string[] | null
           name: string
           price: number
           provider_id?: string | null
+          seller_id?: string | null
           stock_quantity?: number | null
         }
         Update: {
@@ -384,15 +583,25 @@ export type Database = {
           description?: string | null
           id?: string
           image_url?: string | null
+          is_active?: boolean | null
+          mood_tags?: string[] | null
           name?: string
           price?: number
           provider_id?: string | null
+          seller_id?: string | null
           stock_quantity?: number | null
         }
         Relationships: [
           {
             foreignKeyName: "products_provider_id_fkey"
             columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_seller_id_fkey"
+            columns: ["seller_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -405,33 +614,45 @@ export type Database = {
           bio: string | null
           created_at: string | null
           full_name: string
+          glowcoins_balance: number | null
           id: string
           location: string | null
           phone: string | null
+          referral_code: string | null
+          referred_by: string | null
           updated_at: string | null
           user_role: string
+          wallet_balance: number | null
         }
         Insert: {
           avatar_url?: string | null
           bio?: string | null
           created_at?: string | null
           full_name: string
+          glowcoins_balance?: number | null
           id: string
           location?: string | null
           phone?: string | null
+          referral_code?: string | null
+          referred_by?: string | null
           updated_at?: string | null
           user_role: string
+          wallet_balance?: number | null
         }
         Update: {
           avatar_url?: string | null
           bio?: string | null
           created_at?: string | null
           full_name?: string
+          glowcoins_balance?: number | null
           id?: string
           location?: string | null
           phone?: string | null
+          referral_code?: string | null
+          referred_by?: string | null
           updated_at?: string | null
           user_role?: string
+          wallet_balance?: number | null
         }
         Relationships: []
       }
@@ -480,6 +701,70 @@ export type Database = {
           },
         ]
       }
+      rides: {
+        Row: {
+          booking_id: string | null
+          created_at: string | null
+          dropoff_location: string
+          estimated_duration: number | null
+          fare: number
+          id: string
+          passenger_id: string | null
+          pickup_location: string
+          rider_id: string | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          booking_id?: string | null
+          created_at?: string | null
+          dropoff_location: string
+          estimated_duration?: number | null
+          fare: number
+          id?: string
+          passenger_id?: string | null
+          pickup_location: string
+          rider_id?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          booking_id?: string | null
+          created_at?: string | null
+          dropoff_location?: string
+          estimated_duration?: number | null
+          fare?: number
+          id?: string
+          passenger_id?: string | null
+          pickup_location?: string
+          rider_id?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rides_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rides_passenger_id_fkey"
+            columns: ["passenger_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rides_rider_id_fkey"
+            columns: ["rider_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       services: {
         Row: {
           category: string
@@ -488,6 +773,8 @@ export type Database = {
           duration: number | null
           id: string
           image_url: string | null
+          is_active: boolean | null
+          mood_tags: string[] | null
           name: string
           price: number
           provider_id: string | null
@@ -499,6 +786,8 @@ export type Database = {
           duration?: number | null
           id?: string
           image_url?: string | null
+          is_active?: boolean | null
+          mood_tags?: string[] | null
           name: string
           price: number
           provider_id?: string | null
@@ -510,6 +799,8 @@ export type Database = {
           duration?: number | null
           id?: string
           image_url?: string | null
+          is_active?: boolean | null
+          mood_tags?: string[] | null
           name?: string
           price?: number
           provider_id?: string | null

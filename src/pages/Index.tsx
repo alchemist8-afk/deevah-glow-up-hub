@@ -11,12 +11,14 @@ import { GrabABiteSection } from "@/components/GrabABiteSection";
 import { TrendingCutsSection } from "@/components/TrendingCutsSection";
 import { DeevahShopSection } from "@/components/DeevahShopSection";
 import { PastGlowsSection } from "@/components/PastGlowsSection";
+import { WalletCard } from "@/components/WalletCard";
+import { CreatePostModal } from "@/components/CreatePostModal";
 import { useMood } from "@/contexts/MoodContext";
 import { useAuth } from "@/contexts/AuthContext";
 
 const Index = () => {
   const { selectedMood } = useMood();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, profile } = useAuth();
 
   return (
     <Layout>
@@ -37,6 +39,32 @@ const Index = () => {
             <MoodPicker />
           </div>
         </section>
+
+        {/* Quick Actions for Authenticated Users */}
+        {isAuthenticated && (
+          <section className="py-8 px-6 bg-gray-50">
+            <div className="max-w-6xl mx-auto">
+              <div className="grid md:grid-cols-3 gap-6">
+                <WalletCard />
+                <div className="md:col-span-2 flex items-center justify-center">
+                  <div className="text-center space-y-4">
+                    <h3 className="text-xl font-semibold text-gray-900">
+                      Welcome back, {profile?.full_name}!
+                    </h3>
+                    <div className="flex gap-4 justify-center">
+                      {profile?.user_role === 'artist' && <CreatePostModal />}
+                      <a href={`/dashboard/${profile?.user_role}`}>
+                        <button className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded-lg font-medium transition-colors">
+                          Go to Dashboard
+                        </button>
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
 
         <div className="bg-gradient-to-b from-white to-gray-50">
           {/* Dynamic Content Based on Mood */}
