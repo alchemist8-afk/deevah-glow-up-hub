@@ -24,7 +24,6 @@ const MobileNavigation = () => {
         { icon: Sparkles, label: "Services", path: "/services" },
         { icon: Coffee, label: "Food", path: "/food" },
         { icon: Package, label: "Shop", path: "/products" },
-        { icon: Car, label: "Rides", path: "/" },
       ];
     }
 
@@ -39,7 +38,6 @@ const MobileNavigation = () => {
         return [
           ...baseItems,
           { icon: Calendar, label: "Bookings", path: "/bookings" },
-          { icon: Car, label: "Rides", path: "/rides" },
           { icon: Wallet, label: "Wallet", path: "/wallet" },
         ];
       case 'artist':
@@ -47,13 +45,11 @@ const MobileNavigation = () => {
           ...baseItems,
           { icon: Calendar, label: "Bookings", path: "/bookings" },
           { icon: Sparkles, label: "Portfolio", path: "/glow-feed" },
-          { icon: Wallet, label: "Wallet", path: "/wallet" },
         ];
       case 'business':
         return [
           ...baseItems,
           { icon: Package, label: "Products", path: "/products" },
-          { icon: Calendar, label: "Orders", path: "/bookings" },
           { icon: Wallet, label: "Wallet", path: "/wallet" },
         ];
       case 'transport':

@@ -68,13 +68,13 @@ const Index = () => {
         )}
 
         <div className="bg-gradient-to-b from-white to-gray-50">
-          {/* Always show core sections */}
+          {/* Always show core sections with real data */}
           <ServicesCategories />
           
-          {/* Deevah Rides Section - Always visible */}
+          {/* Deevah Rides Section - Fully functional */}
           <DeevahRidesSection />
           
-          {/* Dynamic Content Based on Mood */}
+          {/* Dynamic Content Based on Mood - All connected to Supabase */}
           {selectedMood ? (
             <div className="space-y-8">
               <GrabABiteSection />
