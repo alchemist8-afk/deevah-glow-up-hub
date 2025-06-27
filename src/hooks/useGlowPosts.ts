@@ -6,18 +6,21 @@ import { toast } from "sonner";
 
 export interface GlowPost {
   id: string;
-  artist_id: string;
+  artist_id: string | null;
+  user_id: string | null;
   image_url: string;
-  description: string;
-  service_category: string;
-  mood_tags: string[];
-  likes_count: number;
-  is_featured: boolean;
-  created_at: string;
+  description: string | null;
+  caption: string | null;
+  service_used: string | null;
+  artist_name: string | null;
+  mood_tags: string[] | null;
+  likes_count: number | null;
+  is_group_session: boolean | null;
+  created_at: string | null;
   profiles?: {
     full_name: string;
-    avatar_url: string;
-  };
+    avatar_url: string | null;
+  } | null;
 }
 
 export function useGlowPosts(category?: string) {
@@ -35,7 +38,7 @@ export function useGlowPosts(category?: string) {
         `);
 
       if (category) {
-        query = query.eq('service_category', category);
+        query = query.eq('service_used', category);
       }
 
       const { data, error } = await query.order('created_at', { ascending: false });
@@ -48,9 +51,12 @@ export function useGlowPosts(category?: string) {
   const createPost = useMutation({
     mutationFn: async (postData: {
       image_url: string;
-      description: string;
-      service_category: string;
+      description?: string;
+      caption?: string;
+      service_used?: string;
+      artist_name?: string;
       mood_tags?: string[];
+      is_group_session?: boolean;
     }) => {
       if (!user?.id) throw new Error('User not authenticated');
 
@@ -58,9 +64,9 @@ export function useGlowPosts(category?: string) {
         .from('glow_posts')
         .insert({
           artist_id: user.id,
+          user_id: user.id,
           ...postData,
           likes_count: 0,
-          is_featured: false,
         })
         .select()
         .single();

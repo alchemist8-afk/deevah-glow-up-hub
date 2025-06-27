@@ -6,27 +6,28 @@ import { toast } from "sonner";
 
 export interface Booking {
   id: string;
-  client_id: string;
-  artist_id: string;
-  service_id: string;
+  client_id: string | null;
+  artist_id: string | null;
+  service_id: string | null;
   booking_date: string;
-  status: string;
-  location_type: string;
-  location_details: string;
-  price: number;
-  escrow_held: boolean;
-  mood: string;
-  notes: string;
-  created_at: string;
+  status: string | null;
+  location_type: string | null;
+  location_details: string | null;
+  price: number | null;
+  escrow_held: boolean | null;
+  mood: string | null;
+  notes: string | null;
+  total_amount: number;
+  created_at: string | null;
   services?: {
     name: string;
     category: string;
-    image_url: string;
-  };
+    image_url: string | null;
+  } | null;
   profiles?: {
     full_name: string;
-    avatar_url: string;
-  };
+    avatar_url: string | null;
+  } | null;
 }
 
 export function useBookings() {
@@ -78,7 +79,7 @@ export function useBookings() {
         .insert({
           client_id: user.id,
           ...bookingData,
-          status: 'pending',
+          total_amount: bookingData.price,
           escrow_held: false,
         })
         .select()

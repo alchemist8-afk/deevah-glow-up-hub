@@ -25,7 +25,8 @@ export function CreatePostModal() {
   const [formData, setFormData] = useState({
     image_url: '',
     description: '',
-    service_category: '',
+    caption: '',
+    service_used: '',
     mood_tags: [] as string[]
   });
 
@@ -34,16 +35,20 @@ export function CreatePostModal() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.image_url || !formData.service_category) {
+    if (!formData.image_url) {
       return;
     }
 
-    await createPost.mutateAsync(formData);
+    await createPost.mutateAsync({
+      ...formData,
+      mood_tags: formData.mood_tags.length > 0 ? formData.mood_tags : undefined
+    });
     setOpen(false);
     setFormData({
       image_url: '',
       description: '',
-      service_category: '',
+      caption: '',
+      service_used: '',
       mood_tags: []
     });
   };
@@ -88,12 +93,12 @@ export function CreatePostModal() {
           </div>
 
           <div>
-            <Label htmlFor="category">Service Category *</Label>
-            <Select value={formData.service_category} onValueChange={(value) => 
-              setFormData(prev => ({ ...prev, service_category: value }))
+            <Label htmlFor="service">Service Used</Label>
+            <Select value={formData.service_used} onValueChange={(value) => 
+              setFormData(prev => ({ ...prev, service_used: value }))
             }>
               <SelectTrigger>
-                <SelectValue placeholder="Select category" />
+                <SelectValue placeholder="Select service" />
               </SelectTrigger>
               <SelectContent>
                 {serviceCategories.map(category => (
@@ -103,6 +108,16 @@ export function CreatePostModal() {
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          <div>
+            <Label htmlFor="caption">Caption</Label>
+            <Input
+              id="caption"
+              placeholder="Add a caption..."
+              value={formData.caption}
+              onChange={(e) => setFormData(prev => ({ ...prev, caption: e.target.value }))}
+            />
           </div>
 
           <div>

@@ -5,13 +5,16 @@ import { supabase } from '@/integrations/supabase/client';
 export interface GlowPost {
   id: string;
   user_id: string | null;
+  artist_id: string | null;
   image_url: string;
   caption: string | null;
+  description: string | null;
   service_used: string | null;
   artist_name: string | null;
   is_group_session: boolean | null;
   likes_count: number | null;
-  created_at: string;
+  mood_tags: string[] | null;
+  created_at: string | null;
   profiles?: {
     id: string;
     full_name: string;
@@ -49,7 +52,7 @@ export function GlowFeedProvider({ children }: { children: ReactNode }) {
         .from('glow_posts')
         .select(`
           *,
-          profiles (
+          profiles!glow_posts_user_id_fkey (
             id,
             full_name,
             avatar_url
