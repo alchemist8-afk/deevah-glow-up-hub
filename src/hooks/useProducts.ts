@@ -64,6 +64,7 @@ export function useProducts(category?: string, mood?: string) {
   };
 }
 
+// Simulate cart functionality using localStorage until cart_items table is available
 export function useCart() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -73,16 +74,25 @@ export function useCart() {
     queryFn: async () => {
       if (!user?.id) return [];
       
-      const { data, error } = await supabase
-        .from('cart_items')
-        .select(`
-          *,
-          products(*)
-        `)
-        .eq('user_id', user.id);
+      // Get cart from localStorage for now
+      const cartData = localStorage.getItem(`cart_${user.id}`);
+      if (!cartData) return [];
+      
+      const cartItemIds = JSON.parse(cartData);
+      if (cartItemIds.length === 0) return [];
+
+      // Fetch product details for cart items
+      const { data: products, error } = await supabase
+        .from('products')
+        .select('*')
+        .in('id', cartItemIds.map((item: any) => item.product_id));
 
       if (error) throw error;
-      return data as CartItem[];
+
+      return cartItemIds.map((item: any) => ({
+        ...item,
+        products: products?.find(p => p.id === item.product_id)
+      })) as CartItem[];
     },
     enabled: !!user?.id,
   });
@@ -91,18 +101,25 @@ export function useCart() {
     mutationFn: async ({ productId, quantity = 1 }: { productId: string; quantity?: number }) => {
       if (!user?.id) throw new Error('User not authenticated');
 
-      const { data, error } = await supabase
-        .from('cart_items')
-        .upsert({
+      const cartData = localStorage.getItem(`cart_${user.id}`);
+      const currentCart = cartData ? JSON.parse(cartData) : [];
+      
+      const existingItem = currentCart.find((item: any) => item.product_id === productId);
+      
+      if (existingItem) {
+        existingItem.quantity += quantity;
+      } else {
+        currentCart.push({
+          id: `cart_${Date.now()}`,
           user_id: user.id,
           product_id: productId,
           quantity,
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
+          created_at: new Date().toISOString()
+        });
+      }
+      
+      localStorage.setItem(`cart_${user.id}`, JSON.stringify(currentCart));
+      return currentCart;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['cart'] });
@@ -115,12 +132,15 @@ export function useCart() {
 
   const removeFromCart = useMutation({
     mutationFn: async (cartItemId: string) => {
-      const { error } = await supabase
-        .from('cart_items')
-        .delete()
-        .eq('id', cartItemId);
+      if (!user?.id) throw new Error('User not authenticated');
 
-      if (error) throw error;
+      const cartData = localStorage.getItem(`cart_${user.id}`);
+      const currentCart = cartData ? JSON.parse(cartData) : [];
+      
+      const updatedCart = currentCart.filter((item: any) => item.id !== cartItemId);
+      localStorage.setItem(`cart_${user.id}`, JSON.stringify(updatedCart));
+      
+      return updatedCart;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['cart'] });
@@ -131,10 +151,18 @@ export function useCart() {
     },
   });
 
+  const clearCart = () => {
+    if (user?.id) {
+      localStorage.removeItem(`cart_${user.id}`);
+      queryClient.invalidateQueries({ queryKey: ['cart'] });
+    }
+  };
+
   return {
     cartItems: cartItems || [],
     isLoading,
     addToCart,
     removeFromCart,
+    clearCart,
   };
 }

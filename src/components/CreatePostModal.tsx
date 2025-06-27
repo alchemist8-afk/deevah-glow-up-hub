@@ -1,160 +1,222 @@
 
-import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
-import { Plus, Upload } from "lucide-react";
-import { useGlowPosts } from "@/hooks/useGlowPosts";
-import { useAuth } from "@/contexts/AuthContext";
+import React, { useState } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
+import { ImageUpload } from '@/components/ImageUpload';
+import { Plus, Sparkles, X } from 'lucide-react';
+import { useGlowPosts } from '@/hooks/useGlowPosts';
+import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
 
-const serviceCategories = [
-  'Braids', 'Dreadlocks', 'Nails', 'Massage', 'Cuts', 'Makeup', 'Skincare'
+const moodOptions = [
+  { value: 'calm', label: 'Calm & Relaxed', emoji: '🌿' },
+  { value: 'fast', label: 'Quick & Efficient', emoji: '⚡' },
+  { value: 'social', label: 'Social & Fun', emoji: '💃' },
+  { value: 'private', label: 'Private & Intimate', emoji: '🤫' }
 ];
 
-const moodTags = [
-  'calm', 'energetic', 'glamorous', 'natural', 'bold', 'elegant', 'fun', 'professional'
+const serviceCategories = [
+  'Hair', 'Braids', 'Nails', 'Massage', 'Makeup', 'Skincare', 'Lashes', 'Eyebrows'
 ];
 
 export function CreatePostModal() {
-  const { profile } = useAuth();
-  const { createPost } = useGlowPosts();
   const [open, setOpen] = useState(false);
-  const [formData, setFormData] = useState({
-    image_url: '',
-    description: '',
-    caption: '',
-    service_used: '',
-    mood_tags: [] as string[]
-  });
-
-  if (profile?.user_role !== 'artist') return null;
+  const [imageUrl, setImageUrl] = useState('');
+  const [caption, setCaption] = useState('');
+  const [description, setDescription] = useState('');
+  const [serviceUsed, setServiceUsed] = useState('');
+  const [artistName, setArtistName] = useState('');
+  const [selectedMoods, setSelectedMoods] = useState<string[]>([]);
+  const [isGroupSession, setIsGroupSession] = useState(false);
+  
+  const { createPost } = useGlowPosts();
+  const { profile } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.image_url) {
+    if (!imageUrl) {
+      toast.error('Please upload an image');
       return;
     }
 
-    await createPost.mutateAsync({
-      ...formData,
-      mood_tags: formData.mood_tags.length > 0 ? formData.mood_tags : undefined
-    });
-    setOpen(false);
-    setFormData({
-      image_url: '',
-      description: '',
-      caption: '',
-      service_used: '',
-      mood_tags: []
-    });
+    if (!caption.trim()) {
+      toast.error('Please add a caption');
+      return;
+    }
+
+    try {
+      await createPost.mutateAsync({
+        image_url: imageUrl,
+        caption: caption.trim(),
+        description: description.trim() || undefined,
+        service_used: serviceUsed || undefined,
+        artist_name: artistName.trim() || profile?.full_name || undefined,
+        mood_tags: selectedMoods.length > 0 ? selectedMoods : undefined,
+        is_group_session: isGroupSession
+      });
+      
+      // Reset form
+      setImageUrl('');
+      setCaption('');
+      setDescription('');
+      setServiceUsed('');
+      setArtistName('');
+      setSelectedMoods([]);
+      setIsGroupSession(false);
+      setOpen(false);
+    } catch (error) {
+      console.error('Post creation error:', error);
+    }
   };
 
-  const toggleMoodTag = (tag: string) => {
-    setFormData(prev => ({
-      ...prev,
-      mood_tags: prev.mood_tags.includes(tag)
-        ? prev.mood_tags.filter(t => t !== tag)
-        : [...prev.mood_tags, tag]
-    }));
+  const toggleMood = (mood: string) => {
+    setSelectedMoods(prev => 
+      prev.includes(mood) 
+        ? prev.filter(m => m !== mood)
+        : [...prev, mood]
+    );
   };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="bg-blue-600 hover:bg-blue-700">
+        <Button className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700">
           <Plus className="w-4 h-4 mr-2" />
-          Share Your Work
+          Share Your Glow
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-md">
+      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Share Your Glow Work</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <Sparkles className="w-5 h-5 text-purple-600" />
+            Share Your Glow Moment
+          </DialogTitle>
         </DialogHeader>
         
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <Label htmlFor="image">Image URL *</Label>
-            <div className="flex gap-2">
-              <Input
-                id="image"
-                placeholder="Paste image URL here"
-                value={formData.image_url}
-                onChange={(e) => setFormData(prev => ({ ...prev, image_url: e.target.value }))}
-                required
-              />
-              <Button type="button" variant="outline" size="icon">
-                <Upload className="w-4 h-4" />
-              </Button>
-            </div>
-          </div>
-
-          <div>
-            <Label htmlFor="service">Service Used</Label>
-            <Select value={formData.service_used} onValueChange={(value) => 
-              setFormData(prev => ({ ...prev, service_used: value }))
-            }>
-              <SelectTrigger>
-                <SelectValue placeholder="Select service" />
-              </SelectTrigger>
-              <SelectContent>
-                {serviceCategories.map(category => (
-                  <SelectItem key={category} value={category}>
-                    {category}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div>
-            <Label htmlFor="caption">Caption</Label>
-            <Input
-              id="caption"
-              placeholder="Add a caption..."
-              value={formData.caption}
-              onChange={(e) => setFormData(prev => ({ ...prev, caption: e.target.value }))}
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="space-y-2">
+            <Label>Photo *</Label>
+            <ImageUpload 
+              onImageUpload={setImageUrl}
+              currentImage={imageUrl}
+              bucketName="glow-posts"
             />
           </div>
 
-          <div>
-            <Label htmlFor="description">Description</Label>
+          <div className="space-y-2">
+            <Label htmlFor="caption">Caption *</Label>
             <Textarea
-              id="description"
-              placeholder="Tell us about this work..."
-              value={formData.description}
-              onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+              id="caption"
+              placeholder="Tell us about your glow transformation..."
+              value={caption}
+              onChange={(e) => setCaption(e.target.value)}
+              required
               rows={3}
             />
           </div>
 
-          <div>
+          <div className="space-y-2">
+            <Label htmlFor="description">Description</Label>
+            <Textarea
+              id="description"
+              placeholder="Share more details about your experience..."
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={2}
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Service Category</Label>
+              <Select value={serviceUsed} onValueChange={setServiceUsed}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select service" />
+                </SelectTrigger>
+                <SelectContent>
+                  {serviceCategories.map(category => (
+                    <SelectItem key={category} value={category}>
+                      {category}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="artist-name">Artist Name</Label>
+              <Input
+                id="artist-name"
+                placeholder="Credit your artist"
+                value={artistName}
+                onChange={(e) => setArtistName(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div className="space-y-3">
             <Label>Mood Tags</Label>
-            <div className="flex flex-wrap gap-2 mt-2">
-              {moodTags.map(tag => (
+            <div className="grid grid-cols-2 gap-2">
+              {moodOptions.map(mood => (
                 <Button
-                  key={tag}
+                  key={mood.value}
                   type="button"
-                  variant={formData.mood_tags.includes(tag) ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => toggleMoodTag(tag)}
-                  className="text-xs"
+                  variant={selectedMoods.includes(mood.value) ? "default" : "outline"}
+                  onClick={() => toggleMood(mood.value)}
+                  className="justify-start"
                 >
-                  {tag}
+                  <span className="mr-2">{mood.emoji}</span>
+                  {mood.label}
                 </Button>
               ))}
             </div>
+            {selectedMoods.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-2">
+                {selectedMoods.map(mood => {
+                  const moodOption = moodOptions.find(m => m.value === mood);
+                  return (
+                    <Badge key={mood} variant="secondary" className="flex items-center gap-1">
+                      {moodOption?.emoji} {moodOption?.label}
+                      <X 
+                        className="w-3 h-3 cursor-pointer" 
+                        onClick={() => toggleMood(mood)}
+                      />
+                    </Badge>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              id="group-session"
+              checked={isGroupSession}
+              onChange={(e) => setIsGroupSession(e.target.checked)}
+              className="rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+            />
+            <Label htmlFor="group-session" className="text-sm">
+              This was a group session
+            </Label>
           </div>
 
           <div className="flex gap-2 pt-4">
             <Button type="button" variant="outline" onClick={() => setOpen(false)} className="flex-1">
               Cancel
             </Button>
-            <Button type="submit" disabled={createPost.isPending} className="flex-1">
-              {createPost.isPending ? 'Posting...' : 'Post'}
+            <Button 
+              type="submit" 
+              disabled={createPost.isPending || !imageUrl || !caption.trim()}
+              className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+            >
+              {createPost.isPending ? 'Posting...' : 'Share Glow'}
             </Button>
           </div>
         </form>
