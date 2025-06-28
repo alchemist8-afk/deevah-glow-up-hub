@@ -1,6 +1,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
 export interface Restaurant {
@@ -16,6 +17,7 @@ export interface Restaurant {
 }
 
 export const useRestaurants = () => {
+  const { profile } = useAuth();
   const { data: restaurants = [], isLoading } = useQuery({
     queryKey: ["restaurants"],
     queryFn: async () => {
@@ -42,9 +44,21 @@ export const useRestaurants = () => {
 
   const createRestaurant = useMutation({
     mutationFn: async (restaurantData: Omit<Restaurant, 'id' | 'created_at'>) => {
-      // This would typically create a restaurant profile
-      // For now, we'll just return the data since restaurants are profiles
-      return restaurantData;
+      // Update the user's profile to reflect restaurant information
+      const { data, error } = await supabase
+        .from("profiles")
+        .update({
+          full_name: restaurantData.name,
+          bio: restaurantData.description,
+          location: restaurantData.location,
+          avatar_url: restaurantData.image_url
+        })
+        .eq("id", profile?.id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["restaurants"] });
