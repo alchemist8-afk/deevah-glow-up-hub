@@ -116,13 +116,12 @@ const RiderDashboard = () => {
     try {
       setIsOnline(online);
       
-      // Update rider availability in database
+      // Update rider availability using artist_availability table (reusing for riders)
       const { error } = await supabase
-        .from('rider_availability')
+        .from('artist_availability')
         .upsert({
-          rider_id: profile?.id,
-          is_online: online,
-          last_seen: new Date().toISOString()
+          artist_id: profile?.id,
+          status: online ? 'available' : 'unavailable'
         });
 
       if (error) throw error;
@@ -169,7 +168,7 @@ const RiderDashboard = () => {
         await fetchEarnings();
       }
       
-      const statusMessages = {
+      const statusMessages: { [key: string]: string } = {
         'en_route_pickup': 'Heading to pickup location',
         'passenger_picked': 'Passenger picked up, heading to destination',
         'completed': 'Ride completed successfully!'
