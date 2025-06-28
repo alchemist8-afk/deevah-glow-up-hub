@@ -2,247 +2,142 @@
 import { Layout } from "@/components/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ImageUpload } from "@/components/ImageUpload";
 import { 
   Camera, 
-  Calendar, 
   DollarSign, 
-  Users, 
-  Clock, 
+  Calendar, 
   Star, 
-  Upload,
+  Users,
+  MapPin,
+  Clock,
+  Plus,
+  Edit,
+  Trash2,
   Eye,
   CheckCircle,
   XCircle,
-  MapPin,
-  Palette
+  TrendingUp
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useWallet } from "@/contexts/WalletContext";
+import { useServices, useCreateService } from "@/hooks/useServices";
+import { useGlowPosts } from "@/hooks/useGlowPosts";
+import { useBookings } from "@/hooks/useBookings";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
-
-interface ArtistAvailability {
-  id: string;
-  status: 'available' | 'busy' | 'offline';
-  allows_group_sessions: boolean;
-  max_group_size: number;
-  hourly_rate: number;
-}
-
-interface Booking {
-  id: string;
-  booking_date: string;
-  status: string;
-  total_amount: number;
-  client_id: string;
-  is_group_session: boolean;
-  location: string;
-  notes: string;
-  profiles?: {
-    full_name: string;
-  };
-}
-
-interface PortfolioItem {
-  id: string;
-  image_url: string;
-  title: string;
-  description: string;
-  service_category: string;
-  is_featured: boolean;
-  created_at: string;
-}
+import { toast } from "sonner";
 
 const ArtistDashboard = () => {
-  const { profile } = useAuth();
-  const { balance, transactions } = useWallet();
-  const { toast } = useToast();
+  const { profile, updateProfile } = useAuth();
+  const { services } = useServices();
+  const { posts } = useGlowPosts();
+  const { bookings, updateBookingStatus } = useBookings();
+  const { createPost } = useGlowPosts();
+  const createService = useCreateService();
+
+  const [isAvailable, setIsAvailable] = useState(true);
+  const [allowsGroupSessions, setAllowsGroupSessions] = useState(true);
+  const [bio, setBio] = useState(profile?.bio || '');
+  const [location, setLocation] = useState(profile?.location || '');
+  const [hourlyRate, setHourlyRate] = useState(50);
+  const [profileImage, setProfileImage] = useState(profile?.avatar_url || '');
   
-  const [availability, setAvailability] = useState<ArtistAvailability | null>(null);
-  const [bookings, setBookings] = useState<Booking[]>([]);
-  const [portfolio, setPortfolio] = useState<PortfolioItem[]>([]);
-  const [newPortfolioItem, setNewPortfolioItem] = useState({
-    image_url: '',
-    title: '',
+  // New service form
+  const [showServiceForm, setShowServiceForm] = useState(false);
+  const [newService, setNewService] = useState({
+    name: '',
+    category: '',
     description: '',
-    service_category: '',
-    is_featured: false
-  });
-  const [profileUpdates, setProfileUpdates] = useState({
-    bio: profile?.bio || '',
-    location: profile?.location || ''
+    price: '',
+    duration: '',
+    image_url: '',
+    mood_tags: [] as string[]
   });
 
-  useEffect(() => {
-    if (profile) {
-      fetchArtistData();
-    }
-  }, [profile]);
+  const myServices = services.filter(s => s.provider_id === profile?.id);
+  const myPosts = posts.filter(p => p.artist_id === profile?.id);
+  const myBookings = bookings.filter(b => b.artist_id === profile?.id);
 
-  const fetchArtistData = async () => {
-    if (!profile) return;
+  const categories = ['Hair', 'Braids', 'Nails', 'Beauty', 'Massage', 'Lashes', 'Makeup'];
+  const moods = ['calm', 'fast', 'social', 'private'];
 
-    try {
-      // Fetch availability
-      const { data: availData } = await supabase
-        .from('artist_availability')
-        .select('*')
-        .eq('artist_id', profile.id)
-        .single();
+  const pendingBookings = myBookings.filter(b => b.status === 'pending');
+  const completedBookings = myBookings.filter(b => b.status === 'completed');
+  const totalEarnings = completedBookings.reduce((sum, b) => sum + (b.total_amount || 0), 0);
 
-      if (availData) {
-        setAvailability(availData as ArtistAvailability);
-      }
-
-      // Fetch bookings with proper join
-      const { data: bookingData } = await supabase
-        .from('bookings')
-        .select(`
-          id,
-          booking_date,
-          status,
-          total_amount,
-          client_id,
-          is_group_session,
-          location,
-          notes,
-          profiles:client_id (
-            full_name
-          )
-        `)
-        .eq('provider_id', profile.id)
-        .order('booking_date', { ascending: false });
-
-      if (bookingData) {
-        setBookings(bookingData.map(booking => ({
-          ...booking,
-          profiles: Array.isArray(booking.profiles) ? booking.profiles[0] : booking.profiles
-        })) as Booking[]);
-      }
-
-      // Fetch portfolio
-      const { data: portfolioData } = await supabase
-        .from('artist_portfolio')
-        .select('*')
-        .eq('artist_id', profile.id)
-        .order('created_at', { ascending: false });
-
-      if (portfolioData) {
-        setPortfolio(portfolioData);
-      }
-    } catch (error) {
-      console.error('Error fetching artist data:', error);
-    }
-  };
-
-  const updateAvailability = async (updates: Partial<ArtistAvailability>) => {
-    if (!profile) return;
-
+  const updateAvailability = async () => {
     try {
       const { error } = await supabase
         .from('artist_availability')
         .upsert({
-          artist_id: profile.id,
-          ...availability,
-          ...updates
+          artist_id: profile?.id,
+          status: isAvailable ? 'available' : 'unavailable',
+          allows_group_sessions: allowsGroupSessions,
+          hourly_rate: hourlyRate
         });
 
       if (error) throw error;
-
-      setAvailability(prev => prev ? { ...prev, ...updates } : null);
-      
-      toast({
-        title: "Availability Updated",
-        description: "Your availability settings have been saved"
-      });
+      toast.success('Availability updated successfully!');
     } catch (error) {
       console.error('Error updating availability:', error);
-      toast({
-        title: "Update Failed",
-        description: "Failed to update availability",
-        variant: "destructive"
-      });
+      toast.error('Failed to update availability');
     }
   };
 
-  const updateBookingStatus = async (bookingId: string, status: string) => {
+  const handleProfileUpdate = async () => {
     try {
-      const { error } = await supabase
-        .from('bookings')
-        .update({ status })
-        .eq('id', bookingId);
-
-      if (error) throw error;
-
-      setBookings(prev => 
-        prev.map(booking => 
-          booking.id === bookingId ? { ...booking, status } : booking
-        )
-      );
-
-      toast({
-        title: "Booking Updated",
-        description: `Booking has been ${status}`
+      await updateProfile({
+        bio,
+        location,
+        avatar_url: profileImage
       });
+      toast.success('Profile updated successfully!');
     } catch (error) {
-      console.error('Error updating booking:', error);
+      toast.error('Failed to update profile');
     }
   };
 
-  const addPortfolioItem = async () => {
-    if (!profile || !newPortfolioItem.image_url || !newPortfolioItem.title) return;
-
+  const handleCreateService = async () => {
     try {
-      const { error } = await supabase
-        .from('artist_portfolio')
-        .insert({
-          artist_id: profile.id,
-          ...newPortfolioItem
-        });
-
-      if (error) throw error;
-
-      setNewPortfolioItem({
-        image_url: '',
-        title: '',
-        description: '',
-        service_category: '',
-        is_featured: false
+      await createService.mutateAsync({
+        name: newService.name,
+        category: newService.category,
+        description: newService.description,
+        price: parseFloat(newService.price),
+        duration: parseInt(newService.duration),
+        image_url: newService.image_url,
+        mood_tags: newService.mood_tags
       });
-
-      await fetchArtistData();
       
-      toast({
-        title: "Portfolio Updated",
-        description: "New work has been added to your portfolio"
+      setNewService({
+        name: '',
+        category: '',
+        description: '',
+        price: '',
+        duration: '',
+        image_url: '',
+        mood_tags: []
       });
+      setShowServiceForm(false);
+      toast.success('Service created successfully!');
     } catch (error) {
-      console.error('Error adding portfolio item:', error);
+      toast.error('Failed to create service');
     }
   };
 
-  const sampleImages = [
-    'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e',
-    'https://images.unsplash.com/photo-1487412947147-5cebf100ffc2',
-    'https://images.unsplash.com/photo-1583000520395-7e30d4e2fc88',
-    'https://images.unsplash.com/photo-1571875257727-4ddc5cf765d6'
-  ];
-
-  const todaysEarnings = transactions
-    .filter(t => t.type === 'booking' && new Date(t.created_at).toDateString() === new Date().toDateString())
-    .reduce((sum, t) => sum + t.amount, 0);
-
-  const pendingBookings = bookings.filter(b => b.status === 'pending').length;
-  const completedBookings = bookings.filter(b => b.status === 'completed').length;
+  const handleBookingResponse = async (bookingId: string, status: 'confirmed' | 'cancelled') => {
+    try {
+      await updateBookingStatus.mutateAsync({ bookingId, status });
+    } catch (error) {
+      toast.error('Failed to update booking');
+    }
+  };
 
   return (
     <Layout>
@@ -250,35 +145,22 @@ const ArtistDashboard = () => {
         <div className="container mx-auto px-6 py-8">
           <div className="flex items-center justify-between mb-8">
             <div>
-              <h1 className="text-4xl font-bold text-gray-900">Artist Control Panel</h1>
-              <p className="text-xl text-gray-600">Manage your artistry empire</p>
+              <h1 className="text-4xl font-bold text-gray-900">Artist Dashboard</h1>
+              <p className="text-xl text-gray-600">Control your brand and grow your business</p>
             </div>
             
-            {availability && (
-              <div className="flex items-center space-x-4">
-                <Badge 
-                  variant={availability.status === 'available' ? 'default' : 'secondary'}
-                  className="text-lg px-4 py-2"
-                >
-                  {availability.status.charAt(0).toUpperCase() + availability.status.slice(1)}
-                </Badge>
-                <Select
-                  value={availability.status}
-                  onValueChange={(value: 'available' | 'busy' | 'offline') => 
-                    updateAvailability({ status: value })
-                  }
-                >
-                  <SelectTrigger className="w-40">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="available">Available</SelectItem>
-                    <SelectItem value="busy">Busy</SelectItem>
-                    <SelectItem value="offline">Offline</SelectItem>
-                  </SelectContent>
-                </Select>
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-gray-600">Available</span>
+                <Switch 
+                  checked={isAvailable}
+                  onCheckedChange={(checked) => {
+                    setIsAvailable(checked);
+                    updateAvailability();
+                  }}
+                />
               </div>
-            )}
+            </div>
           </div>
 
           {/* Stats Cards */}
@@ -287,8 +169,8 @@ const ArtistDashboard = () => {
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600">Today's Earnings</p>
-                    <p className="text-2xl font-bold text-green-600">KSh {todaysEarnings}</p>
+                    <p className="text-sm font-medium text-gray-600">Total Earnings</p>
+                    <p className="text-2xl font-bold text-green-600">KSh {totalEarnings}</p>
                   </div>
                   <DollarSign className="w-8 h-8 text-green-600" />
                 </div>
@@ -300,9 +182,9 @@ const ArtistDashboard = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-gray-600">Pending Bookings</p>
-                    <p className="text-2xl font-bold text-orange-600">{pendingBookings}</p>
+                    <p className="text-2xl font-bold text-orange-600">{pendingBookings.length}</p>
                   </div>
-                  <Clock className="w-8 h-8 text-orange-600" />
+                  <Calendar className="w-8 h-8 text-orange-600" />
                 </div>
               </CardContent>
             </Card>
@@ -311,10 +193,10 @@ const ArtistDashboard = () => {
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600">Completed</p>
-                    <p className="text-2xl font-bold text-blue-600">{completedBookings}</p>
+                    <p className="text-sm font-medium text-gray-600">Active Services</p>
+                    <p className="text-2xl font-bold text-blue-600">{myServices.length}</p>
                   </div>
-                  <CheckCircle className="w-8 h-8 text-blue-600" />
+                  <Star className="w-8 h-8 text-blue-600" />
                 </div>
               </CardContent>
             </Card>
@@ -323,207 +205,191 @@ const ArtistDashboard = () => {
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600">Portfolio Items</p>
-                    <p className="text-2xl font-bold text-purple-600">{portfolio.length}</p>
+                    <p className="text-sm font-medium text-gray-600">Portfolio Posts</p>
+                    <p className="text-2xl font-bold text-purple-600">{myPosts.length}</p>
                   </div>
-                  <Palette className="w-8 h-8 text-purple-600" />
+                  <Camera className="w-8 h-8 text-purple-600" />
                 </div>
               </CardContent>
             </Card>
           </div>
 
-          <Tabs defaultValue="bookings" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-4">
+          <Tabs defaultValue="profile" className="space-y-6">
+            <TabsList className="grid w-full grid-cols-5">
+              <TabsTrigger value="profile">Profile</TabsTrigger>
+              <TabsTrigger value="services">Services</TabsTrigger>
               <TabsTrigger value="bookings">Bookings</TabsTrigger>
               <TabsTrigger value="portfolio">Portfolio</TabsTrigger>
               <TabsTrigger value="settings">Settings</TabsTrigger>
-              <TabsTrigger value="earnings">Earnings</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="bookings" className="space-y-4">
+            <TabsContent value="profile" className="space-y-6">
               <Card>
                 <CardHeader>
-                  <CardTitle>Active Bookings</CardTitle>
+                  <CardTitle>Profile Information</CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {bookings.length === 0 ? (
-                      <p className="text-center text-gray-500 py-8">No bookings yet</p>
-                    ) : (
-                      bookings.map((booking) => (
-                        <div key={booking.id} className="flex items-center justify-between p-4 border rounded-lg">
-                          <div className="flex-1">
-                            <div className="flex items-center space-x-4">
-                              <div>
-                                <p className="font-semibold">{booking.profiles?.full_name || 'Unknown Client'}</p>
-                                <p className="text-sm text-gray-600">
-                                  {new Date(booking.booking_date).toLocaleDateString()} - KSh {booking.total_amount}
-                                </p>
-                                {booking.location && (
-                                  <p className="text-sm text-gray-500 flex items-center mt-1">
-                                    <MapPin className="w-3 h-3 mr-1" />
-                                    {booking.location}
-                                  </p>
-                                )}
-                              </div>
-                              <Badge variant={
-                                booking.status === 'completed' ? 'default' :
-                                booking.status === 'pending' ? 'secondary' : 'outline'
-                              }>
-                                {booking.status}
-                              </Badge>
-                              {booking.is_group_session && (
-                                <Badge variant="outline">
-                                  <Users className="w-3 h-3 mr-1" />
-                                  Group Session
-                                </Badge>
-                              )}
-                            </div>
-                            {booking.notes && (
-                              <p className="text-sm text-gray-600 mt-2">{booking.notes}</p>
-                            )}
-                          </div>
-                          
-                          {booking.status === 'pending' && (
-                            <div className="flex space-x-2">
-                              <Button
-                                size="sm"
-                                onClick={() => updateBookingStatus(booking.id, 'confirmed')}
-                                className="bg-green-600 hover:bg-green-700"
-                              >
-                                <CheckCircle className="w-4 h-4 mr-1" />
-                                Accept
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => updateBookingStatus(booking.id, 'cancelled')}
-                              >
-                                <XCircle className="w-4 h-4 mr-1" />
-                                Decline
-                              </Button>
-                            </div>
-                          )}
-                        </div>
-                      ))
-                    )}
+                <CardContent className="space-y-6">
+                  <div className="grid md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-sm font-medium mb-2">Profile Picture</label>
+                      <ImageUpload
+                        onImageUpload={setProfileImage}
+                        currentImage={profileImage}
+                        className="max-w-sm"
+                      />
+                    </div>
+                    
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium mb-2">Bio</label>
+                        <Textarea
+                          value={bio}
+                          onChange={(e) => setBio(e.target.value)}
+                          placeholder="Tell clients about yourself and your expertise..."
+                          rows={4}
+                        />
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium mb-2">Location</label>
+                        <Input
+                          value={location}
+                          onChange={(e) => setLocation(e.target.value)}
+                          placeholder="e.g., Westlands, Nairobi"
+                        />
+                      </div>
+                    </div>
                   </div>
+                  
+                  <Button onClick={handleProfileUpdate} className="bg-purple-600 hover:bg-purple-700">
+                    Update Profile
+                  </Button>
                 </CardContent>
               </Card>
             </TabsContent>
 
-            <TabsContent value="portfolio" className="space-y-4">
+            <TabsContent value="services" className="space-y-6">
               <Card>
-                <CardHeader className="flex flex-row items-center justify-between">
-                  <CardTitle>My Portfolio</CardTitle>
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <Button>
-                        <Upload className="w-4 h-4 mr-2" />
-                        Add Work
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Add Portfolio Item</DialogTitle>
-                      </DialogHeader>
-                      <div className="space-y-4">
-                        <div>
-                          <Label>Choose Image</Label>
-                          <div className="grid grid-cols-2 gap-2 mt-2">
-                            {sampleImages.map((img, index) => (
-                              <div
-                                key={index}
-                                className={`cursor-pointer border-2 rounded-lg overflow-hidden ${
-                                  newPortfolioItem.image_url === img ? 'border-purple-500' : 'border-gray-200'
-                                }`}
-                                onClick={() => setNewPortfolioItem(prev => ({ ...prev, image_url: img }))}
-                              >
-                                <img src={img} alt={`Sample ${index + 1}`} className="w-full h-20 object-cover" />
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-
-                        <div>
-                          <Label htmlFor="title">Title</Label>
-                          <Input
-                            id="title"
-                            value={newPortfolioItem.title}
-                            onChange={(e) => setNewPortfolioItem(prev => ({ ...prev, title: e.target.value }))}
-                            placeholder="Work title..."
-                          />
-                        </div>
-
-                        <div>
-                          <Label htmlFor="description">Description</Label>
-                          <Textarea
-                            id="description"
-                            value={newPortfolioItem.description}
-                            onChange={(e) => setNewPortfolioItem(prev => ({ ...prev, description: e.target.value }))}
-                            placeholder="Describe your work..."
-                          />
-                        </div>
-
-                        <div>
-                          <Label htmlFor="category">Service Category</Label>
-                          <Select
-                            value={newPortfolioItem.service_category}
-                            onValueChange={(value) => setNewPortfolioItem(prev => ({ ...prev, service_category: value }))}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select category..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="Hair">Hair</SelectItem>
-                              <SelectItem value="Nails">Nails</SelectItem>
-                              <SelectItem value="Makeup">Makeup</SelectItem>
-                              <SelectItem value="Braids">Braids</SelectItem>
-                              <SelectItem value="Cuts">Cuts</SelectItem>
-                              <SelectItem value="Massage">Massage</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        <div className="flex items-center space-x-2">
-                          <Switch
-                            id="featured"
-                            checked={newPortfolioItem.is_featured}
-                            onCheckedChange={(checked) => setNewPortfolioItem(prev => ({ ...prev, is_featured: checked }))}
-                          />
-                          <Label htmlFor="featured">Feature this work</Label>
-                        </div>
-
-                        <Button onClick={addPortfolioItem} className="w-full">
-                          Add to Portfolio
-                        </Button>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle>My Services</CardTitle>
+                    <Button 
+                      onClick={() => setShowServiceForm(true)}
+                      className="bg-purple-600 hover:bg-purple-700"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add Service
+                    </Button>
+                  </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid md:grid-cols-3 gap-4">
-                    {portfolio.map((item) => (
-                      <Card key={item.id} className="overflow-hidden">
-                        <div className="relative h-48">
-                          <img 
-                            src={item.image_url} 
-                            alt={item.title}
-                            className="w-full h-full object-cover"
-                          />
-                          {item.is_featured && (
-                            <Badge className="absolute top-2 right-2 bg-yellow-500">
-                              <Star className="w-3 h-3 mr-1" />
-                              Featured
-                            </Badge>
-                          )}
+                  {showServiceForm && (
+                    <Card className="mb-6">
+                      <CardHeader>
+                        <CardTitle>Create New Service</CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div className="grid md:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium mb-2">Service Name</label>
+                            <Input
+                              value={newService.name}
+                              onChange={(e) => setNewService({...newService, name: e.target.value})}
+                              placeholder="e.g., Deep Tissue Massage"
+                            />
+                          </div>
+                          
+                          <div>
+                            <label className="block text-sm font-medium mb-2">Category</label>
+                            <Select value={newService.category} onValueChange={(value) => setNewService({...newService, category: value})}>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select category" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {categories.map(cat => (
+                                  <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
                         </div>
+                        
+                        <div>
+                          <label className="block text-sm font-medium mb-2">Description</label>
+                          <Textarea
+                            value={newService.description}
+                            onChange={(e) => setNewService({...newService, description: e.target.value})}
+                            placeholder="Describe your service..."
+                          />
+                        </div>
+                        
+                        <div className="grid md:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium mb-2">Price (KSh)</label>
+                            <Input
+                              type="number"
+                              value={newService.price}
+                              onChange={(e) => setNewService({...newService, price: e.target.value})}
+                              placeholder="50"
+                            />
+                          </div>
+                          
+                          <div>
+                            <label className="block text-sm font-medium mb-2">Duration (minutes)</label>
+                            <Input
+                              type="number"
+                              value={newService.duration}
+                              onChange={(e) => setNewService({...newService, duration: e.target.value})}
+                              placeholder="60"
+                            />
+                          </div>
+                        </div>
+                        
+                        <div>
+                          <label className="block text-sm font-medium mb-2">Service Image</label>
+                          <ImageUpload
+                            onImageUpload={(url) => setNewService({...newService, image_url: url})}
+                            currentImage={newService.image_url}
+                          />
+                        </div>
+                        
+                        <div className="flex space-x-2">
+                          <Button onClick={handleCreateService} className="bg-green-600 hover:bg-green-700">
+                            Create Service
+                          </Button>
+                          <Button variant="outline" onClick={() => setShowServiceForm(false)}>
+                            Cancel
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+                  
+                  <div className="grid md:grid-cols-2 gap-4">
+                    {myServices.map((service) => (
+                      <Card key={service.id} className="overflow-hidden">
+                        {service.image_url && (
+                          <div className="h-32 overflow-hidden">
+                            <img 
+                              src={service.image_url} 
+                              alt={service.name}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        )}
                         <CardContent className="p-4">
-                          <h3 className="font-semibold">{item.title}</h3>
-                          <p className="text-sm text-gray-600">{item.description}</p>
-                          <Badge variant="outline" className="mt-2">
-                            {item.service_category}
-                          </Badge>
+                          <div className="flex items-start justify-between mb-2">
+                            <h3 className="font-semibold">{service.name}</h3>
+                            <span className="text-lg font-bold text-green-600">KSh {service.price}</span>
+                          </div>
+                          <Badge variant="outline" className="mb-2">{service.category}</Badge>
+                          <p className="text-sm text-gray-600 mb-2">{service.description}</p>
+                          {service.duration && (
+                            <div className="flex items-center text-sm text-gray-500">
+                              <Clock className="w-4 h-4 mr-1" />
+                              {service.duration} min
+                            </div>
+                          )}
                         </CardContent>
                       </Card>
                     ))}
@@ -532,118 +398,139 @@ const ArtistDashboard = () => {
               </Card>
             </TabsContent>
 
-            <TabsContent value="settings" className="space-y-4">
-              <div className="grid md:grid-cols-2 gap-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Availability Settings</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {availability && (
-                      <>
-                        <div className="flex items-center justify-between">
-                          <Label>Accept Group Sessions</Label>
-                          <Switch
-                            checked={availability.allows_group_sessions}
-                            onCheckedChange={(checked) => updateAvailability({ allows_group_sessions: checked })}
-                          />
-                        </div>
-
-                        <div>
-                          <Label htmlFor="maxGroup">Max Group Size</Label>
-                          <Input
-                            id="maxGroup"
-                            type="number"
-                            value={availability.max_group_size}
-                            onChange={(e) => updateAvailability({ max_group_size: parseInt(e.target.value) })}
-                            min="2"
-                            max="10"
-                          />
-                        </div>
-
-                        <div>
-                          <Label htmlFor="hourlyRate">Hourly Rate (KSh)</Label>
-                          <Input
-                            id="hourlyRate"
-                            type="number"
-                            value={availability.hourly_rate || ''}
-                            onChange={(e) => updateAvailability({ hourly_rate: parseFloat(e.target.value) })}
-                            placeholder="Enter your hourly rate..."
-                          />
-                        </div>
-                      </>
-                    )}
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Profile Settings</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div>
-                      <Label htmlFor="bio">Bio</Label>
-                      <Textarea
-                        id="bio"
-                        value={profileUpdates.bio}
-                        onChange={(e) => setProfileUpdates(prev => ({ ...prev, bio: e.target.value }))}
-                        placeholder="Tell clients about yourself..."
-                      />
-                    </div>
-
-                    <div>
-                      <Label htmlFor="location">Location</Label>
-                      <Input
-                        id="location"
-                        value={profileUpdates.location}
-                        onChange={(e) => setProfileUpdates(prev => ({ ...prev, location: e.target.value }))}
-                        placeholder="Your location..."
-                      />
-                    </div>
-
-                    <Button className="w-full">
-                      Update Profile
-                    </Button>
-                  </CardContent>
-                </Card>
-              </div>
-            </TabsContent>
-
-            <TabsContent value="earnings" className="space-y-4">
+            <TabsContent value="bookings" className="space-y-6">
               <Card>
                 <CardHeader>
-                  <CardTitle>Earnings Overview</CardTitle>
+                  <CardTitle>Booking Requests</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid md:grid-cols-3 gap-6 mb-6">
-                    <div className="text-center p-4 bg-green-50 rounded-lg">
-                      <p className="text-2xl font-bold text-green-600">KSh {balance}</p>
-                      <p className="text-sm text-gray-600">Current Balance</p>
-                    </div>
-                    <div className="text-center p-4 bg-blue-50 rounded-lg">
-                      <p className="text-2xl font-bold text-blue-600">KSh {todaysEarnings}</p>
-                      <p className="text-sm text-gray-600">Today's Earnings</p>
-                    </div>
-                    <div className="text-center p-4 bg-purple-50 rounded-lg">
-                      <p className="text-2xl font-bold text-purple-600">{completedBookings}</p>
-                      <p className="text-sm text-gray-600">Completed Sessions</p>
-                    </div>
-                  </div>
-
-                  <div className="space-y-3">
-                    <h3 className="font-semibold">Recent Transactions</h3>
-                    {transactions.slice(0, 10).map((transaction) => (
-                      <div key={transaction.id} className="flex items-center justify-between p-3 border rounded">
-                        <div>
-                          <p className="font-medium">{transaction.description}</p>
-                          <p className="text-sm text-gray-500">{new Date(transaction.created_at).toLocaleDateString()}</p>
-                        </div>
-                        <Badge variant={transaction.amount > 0 ? 'default' : 'secondary'}>
-                          {transaction.amount > 0 ? '+' : ''}KSh {transaction.amount}
-                        </Badge>
+                  <div className="space-y-4">
+                    {pendingBookings.map((booking) => (
+                      <Card key={booking.id} className="border-l-4 border-l-orange-500">
+                        <CardContent className="p-4">
+                          <div className="flex items-center justify-between">
+                            <div className="flex-1">
+                              <h4 className="font-semibold">{booking.services?.name || 'Service'}</h4>
+                              <p className="text-sm text-gray-600">
+                                {new Date(booking.booking_date).toLocaleDateString()} at {new Date(booking.booking_date).toLocaleTimeString()}
+                              </p>
+                              <p className="text-sm text-gray-600">{booking.location_details}</p>
+                              {booking.notes && (
+                                <p className="text-sm text-gray-500 mt-1">Note: {booking.notes}</p>
+                              )}
+                            </div>
+                            <div className="flex flex-col items-end space-y-2">
+                              <span className="text-xl font-bold text-green-600">KSh {booking.total_amount}</span>
+                              <div className="flex space-x-2">
+                                <Button 
+                                  size="sm" 
+                                  onClick={() => handleBookingResponse(booking.id, 'confirmed')}
+                                  className="bg-green-600 hover:bg-green-700"
+                                >
+                                  <CheckCircle className="w-4 h-4 mr-1" />
+                                  Accept
+                                </Button>
+                                <Button 
+                                  size="sm" 
+                                  variant="outline"
+                                  onClick={() => handleBookingResponse(booking.id, 'cancelled')}
+                                >
+                                  <XCircle className="w-4 h-4 mr-1" />
+                                  Decline
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                    
+                    {pendingBookings.length === 0 && (
+                      <div className="text-center py-8">
+                        <Calendar className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                        <p className="text-gray-500">No pending booking requests</p>
                       </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="portfolio" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle>My Work Portfolio</CardTitle>
+                    <p className="text-sm text-gray-600">
+                      Posts appear on Glow Feed and in service category pages
+                    </p>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid md:grid-cols-3 gap-4">
+                    {myPosts.map((post) => (
+                      <Card key={post.id} className="overflow-hidden">
+                        <div className="relative h-48">
+                          <img 
+                            src={post.image_url} 
+                            alt="Portfolio work"
+                            className="w-full h-full object-cover"
+                          />
+                          <div className="absolute top-2 right-2 bg-white/90 backdrop-blur-sm rounded-full px-2 py-1 flex items-center space-x-1">
+                            <Eye className="w-4 h-4" />
+                            <span className="text-xs">{post.likes_count || 0}</span>
+                          </div>
+                        </div>
+                        <CardContent className="p-3">
+                          {post.caption && (
+                            <p className="text-sm text-gray-700 mb-2">{post.caption}</p>
+                          )}
+                          {post.service_used && (
+                            <Badge variant="secondary" className="text-xs">
+                              {post.service_used}
+                            </Badge>
+                          )}
+                        </CardContent>
+                      </Card>
                     ))}
                   </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="settings" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Artist Settings</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="font-medium">Allow Group Sessions</h4>
+                      <p className="text-sm text-gray-600">Let clients book you for group sessions</p>
+                    </div>
+                    <Switch 
+                      checked={allowsGroupSessions}
+                      onCheckedChange={(checked) => {
+                        setAllowsGroupSessions(checked);
+                        updateAvailability();
+                      }}
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Hourly Rate (KSh)</label>
+                    <Input
+                      type="number"
+                      value={hourlyRate}
+                      onChange={(e) => setHourlyRate(parseInt(e.target.value))}
+                      className="max-w-xs"
+                    />
+                  </div>
+                  
+                  <Button onClick={updateAvailability} className="bg-purple-600 hover:bg-purple-700">
+                    Save Settings
+                  </Button>
                 </CardContent>
               </Card>
             </TabsContent>
