@@ -31,7 +31,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 export function AppSidebar() {
-  const { collapsed } = useSidebar();
+  const { state } = useSidebar();
   const location = useLocation();
   const navigate = useNavigate();
   const { user, profile, signOut, isAuthenticated } = useAuth();
@@ -104,6 +104,7 @@ export function AppSidebar() {
 
   const navItems = getNavItems();
   const currentPath = location.pathname;
+  const isCollapsed = state === 'collapsed';
 
   const isActive = (path: string) => {
     if (path === '/') return currentPath === '/';
@@ -117,12 +118,12 @@ export function AppSidebar() {
   };
 
   return (
-    <Sidebar className={collapsed ? "w-14" : "w-64"} collapsible>
+    <Sidebar collapsible="icon">
       <SidebarTrigger className="m-2 self-end" />
       
       <SidebarContent>
         {/* User Profile Section */}
-        {isAuthenticated && profile && !collapsed && (
+        {isAuthenticated && profile && !isCollapsed && (
           <div className="p-4 border-b">
             <div className="flex items-center gap-3">
               <Avatar className="h-10 w-10">
@@ -149,7 +150,7 @@ export function AppSidebar() {
                   <SidebarMenuButton asChild>
                     <NavLink to={item.url} className={getNavClassName(item.url)}>
                       <item.icon className="h-4 w-4" />
-                      {!collapsed && <span>{item.title}</span>}
+                      {!isCollapsed && <span>{item.title}</span>}
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -172,7 +173,7 @@ export function AppSidebar() {
                       className="w-full justify-start"
                     >
                       <ArrowLeft className="h-4 w-4" />
-                      {!collapsed && <span>Back to Home</span>}
+                      {!isCollapsed && <span>Back to Home</span>}
                     </Button>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -184,7 +185,7 @@ export function AppSidebar() {
                   <SidebarMenuButton asChild>
                     <NavLink to="/settings" className={getNavClassName('/settings')}>
                       <Settings className="h-4 w-4" />
-                      {!collapsed && <span>Settings</span>}
+                      {!isCollapsed && <span>Settings</span>}
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -200,7 +201,7 @@ export function AppSidebar() {
                       className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50"
                     >
                       <LogOut className="h-4 w-4" />
-                      {!collapsed && <span>Sign Out</span>}
+                      {!isCollapsed && <span>Sign Out</span>}
                     </Button>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -209,7 +210,7 @@ export function AppSidebar() {
                   <SidebarMenuButton asChild>
                     <NavLink to="/auth" className={getNavClassName('/auth')}>
                       <User className="h-4 w-4" />
-                      {!collapsed && <span>Sign In</span>}
+                      {!isCollapsed && <span>Sign In</span>}
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
