@@ -34,7 +34,8 @@ export function useServices(category?: string, mood?: string) {
         `)
         .eq('is_active', true);
 
-      if (category) {
+      // Handle category filter - don't filter if "all" is selected
+      if (category && category !== 'all' && category !== '') {
         query = query.eq('category', category);
       }
 
@@ -44,7 +45,10 @@ export function useServices(category?: string, mood?: string) {
 
       const { data, error } = await query.order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching services:', error);
+        throw error;
+      }
       return data as Service[];
     },
   });

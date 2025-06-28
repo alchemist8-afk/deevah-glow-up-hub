@@ -21,6 +21,7 @@ import RidesPage from "./pages/RidesPage";
 import BookingsPage from "./pages/BookingsPage";
 import WalletPage from "./pages/WalletPage";
 import GlowFeedPage from "./pages/GlowFeedPage";
+import NotFound from "./pages/NotFound";
 
 // Dashboard imports
 import ClientDashboard from "./pages/ClientDashboard";
@@ -114,8 +115,8 @@ function App() {
                     } 
                   />
 
-                  {/* Catch all route */}
-                  <Route path="*" element={<Navigate to="/" replace />} />
+                  {/* 404 Catch-all route - MUST be last */}
+                  <Route path="*" element={<NotFound />} />
                 </Routes>
               </BrowserRouter>
             </TooltipProvider>
