@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { MoodProvider } from "@/contexts/MoodContext";
 import { WalletProvider } from "@/contexts/WalletContext";
+import { GlowFeedProvider } from "@/contexts/GlowFeedContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
@@ -38,88 +39,90 @@ function App() {
       <AuthProvider>
         <MoodProvider>
           <WalletProvider>
-            <TooltipProvider>
-              <Toaster />
-              <BrowserRouter>
-                <Routes>
-                  {/* Public routes */}
-                  <Route path="/" element={<Index />} />
-                  <Route path="/auth" element={<Auth />} />
-                  <Route path="/services" element={<ServicesPage />} />
-                  <Route path="/services/cuts" element={<CutsPage />} />
-                  <Route path="/services/braids" element={<BraidsPage />} />
-                  <Route path="/services/nails" element={<NailsPage />} />
-                  <Route path="/services/massage" element={<MassagePage />} />
-                  <Route path="/services/dreadlocks" element={<DreadlocksPage />} />
-                  <Route path="/products" element={<ProductsPage />} />
-                  <Route path="/food" element={<FoodPage />} />
-                  <Route path="/glow-feed" element={<GlowFeedPage />} />
+            <GlowFeedProvider>
+              <TooltipProvider>
+                <Toaster />
+                <BrowserRouter>
+                  <Routes>
+                    {/* Public routes */}
+                    <Route path="/" element={<Index />} />
+                    <Route path="/auth" element={<Auth />} />
+                    <Route path="/services" element={<ServicesPage />} />
+                    <Route path="/services/cuts" element={<CutsPage />} />
+                    <Route path="/services/braids" element={<BraidsPage />} />
+                    <Route path="/services/nails" element={<NailsPage />} />
+                    <Route path="/services/massage" element={<MassagePage />} />
+                    <Route path="/services/dreadlocks" element={<DreadlocksPage />} />
+                    <Route path="/products" element={<ProductsPage />} />
+                    <Route path="/food" element={<FoodPage />} />
+                    <Route path="/glow-feed" element={<GlowFeedPage />} />
 
-                  {/* Role-based dashboard routes */}
-                  <Route 
-                    path="/dashboard/client" 
-                    element={
-                      <ProtectedRoute allowedRoles={['client']} requireAuth>
-                        <EnhancedClientDashboard />
-                      </ProtectedRoute>
-                    } 
-                  />
-                  <Route 
-                    path="/dashboard/artist" 
-                    element={
-                      <ProtectedRoute allowedRoles={['artist']} requireAuth>
-                        <ArtistDashboard />
-                      </ProtectedRoute>
-                    } 
-                  />
-                  <Route 
-                    path="/dashboard/business" 
-                    element={
-                      <ProtectedRoute allowedRoles={['business']} requireAuth>
-                        <BusinessDashboard />
-                      </ProtectedRoute>
-                    } 
-                  />
-                  <Route 
-                    path="/dashboard/transport" 
-                    element={
-                      <ProtectedRoute allowedRoles={['transport']} requireAuth>
-                        <RiderDashboard />
-                      </ProtectedRoute>
-                    } 
-                  />
+                    {/* Role-based dashboard routes */}
+                    <Route 
+                      path="/dashboard/client" 
+                      element={
+                        <ProtectedRoute allowedRoles={['client']} requireAuth>
+                          <EnhancedClientDashboard />
+                        </ProtectedRoute>
+                      } 
+                    />
+                    <Route 
+                      path="/dashboard/artist" 
+                      element={
+                        <ProtectedRoute allowedRoles={['artist']} requireAuth>
+                          <ArtistDashboard />
+                        </ProtectedRoute>
+                      } 
+                    />
+                    <Route 
+                      path="/dashboard/business" 
+                      element={
+                        <ProtectedRoute allowedRoles={['business']} requireAuth>
+                          <BusinessDashboard />
+                        </ProtectedRoute>
+                      } 
+                    />
+                    <Route 
+                      path="/dashboard/transport" 
+                      element={
+                        <ProtectedRoute allowedRoles={['transport']} requireAuth>
+                          <RiderDashboard />
+                        </ProtectedRoute>
+                      } 
+                    />
 
-                  {/* Protected routes */}
-                  <Route 
-                    path="/rides" 
-                    element={
-                      <ProtectedRoute requireAuth>
-                        <RidesPage />
-                      </ProtectedRoute>
-                    } 
-                  />
-                  <Route 
-                    path="/bookings" 
-                    element={
-                      <ProtectedRoute requireAuth>
-                        <BookingsPage />
-                      </ProtectedRoute>
-                    } 
-                  />
-                  <Route 
-                    path="/wallet" 
-                    element={
-                      <ProtectedRoute requireAuth>
-                        <WalletPage />
-                      </ProtectedRoute>
-                    } 
-                  />
+                    {/* Protected routes */}
+                    <Route 
+                      path="/rides" 
+                      element={
+                        <ProtectedRoute requireAuth>
+                          <RidesPage />
+                        </ProtectedRoute>
+                      } 
+                    />
+                    <Route 
+                      path="/bookings" 
+                      element={
+                        <ProtectedRoute requireAuth>
+                          <BookingsPage />
+                        </ProtectedRoute>
+                      } 
+                    />
+                    <Route 
+                      path="/wallet" 
+                      element={
+                        <ProtectedRoute requireAuth>
+                          <WalletPage />
+                        </ProtectedRoute>
+                      } 
+                    />
 
-                  {/* 404 Catch-all route - MUST be last */}
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </BrowserRouter>
-            </TooltipProvider>
+                    {/* 404 Catch-all route - MUST be last */}
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                </BrowserRouter>
+              </TooltipProvider>
+            </GlowFeedProvider>
           </WalletProvider>
         </MoodProvider>
       </AuthProvider>
