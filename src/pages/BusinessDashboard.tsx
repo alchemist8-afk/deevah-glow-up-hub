@@ -22,8 +22,8 @@ import {
   Utensils
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useProducts } from "@/hooks/useProducts";
-import { useRestaurants } from "@/hooks/useRestaurants";
+import { useProducts } from "@/hooks/useProducts.tsx";
+import { useRestaurants } from "@/hooks/useRestaurants.tsx";
 import { useServices, useCreateService } from "@/hooks/useServices";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
