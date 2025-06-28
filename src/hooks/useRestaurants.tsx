@@ -18,6 +18,8 @@ export interface Restaurant {
 
 export const useRestaurants = () => {
   const { profile } = useAuth();
+  const queryClient = useQueryClient();
+  
   const { data: restaurants = [], isLoading } = useQuery({
     queryKey: ["restaurants"],
     queryFn: async () => {
@@ -39,8 +41,6 @@ export const useRestaurants = () => {
       })) as Restaurant[];
     },
   });
-
-  const queryClient = useQueryClient();
 
   const createRestaurant = useMutation({
     mutationFn: async (restaurantData: Omit<Restaurant, 'id' | 'created_at'>) => {

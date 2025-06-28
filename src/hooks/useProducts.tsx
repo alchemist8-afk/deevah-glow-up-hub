@@ -21,6 +21,8 @@ export interface Product {
 
 export const useProducts = () => {
   const { profile } = useAuth();
+  const queryClient = useQueryClient();
+  
   const { data: products = [], isLoading } = useQuery({
     queryKey: ["products"],
     queryFn: async () => {
@@ -34,8 +36,6 @@ export const useProducts = () => {
       return data as Product[];
     },
   });
-
-  const queryClient = useQueryClient();
 
   const createProduct = useMutation({
     mutationFn: async (productData: Omit<Product, 'id' | 'created_at'>) => {
