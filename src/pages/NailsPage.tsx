@@ -56,7 +56,7 @@ const nailServices = [
     provider: 'Priscilla Nails',
     providerId: 'nails1',
     price: 45,
-    duration: '60 min',
+    duration: 60, // Changed from "60 min" to 60
     description: 'Long-lasting gel manicure with custom nail art design',
     category: 'Nails'
   },
@@ -66,7 +66,7 @@ const nailServices = [
     provider: 'Crystal Nail Studio',
     providerId: 'nails2',
     price: 65,
-    duration: '90 min',
+    duration: 90, // Changed from "90 min" to 90
     description: 'Full set acrylic extensions with shape and length of choice',
     category: 'Nails'
   },
@@ -76,7 +76,7 @@ const nailServices = [
     provider: 'Elegant Touch',
     providerId: 'nails3',
     price: 40,
-    duration: '45 min',
+    duration: 45, // Changed from "45 min" to 45
     description: 'Complete pedicure with exfoliation, massage, and polish',
     category: 'Nails'
   }

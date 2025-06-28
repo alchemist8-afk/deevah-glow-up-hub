@@ -76,7 +76,7 @@ const popularServices = [
     provider: 'Marcus Johnson',
     providerId: 'barber1',
     price: 65,
-    duration: '45 min',
+    duration: 45, // Changed from "45 min" to 45
     description: 'Complete grooming experience with precision fade and beard sculpting',
     category: 'Cuts'
   },
@@ -86,7 +86,7 @@ const popularServices = [
     provider: 'Tony Martinez',
     providerId: 'barber2',
     price: 40,
-    duration: '30 min',
+    duration: 30, // Changed from "30 min" to 30
     description: 'Traditional barbershop experience with hot towel and straight razor',
     category: 'Cuts'
   },
@@ -96,7 +96,7 @@ const popularServices = [
     provider: 'Andre Williams',
     providerId: 'barber3',
     price: 70,
-    duration: '1 hour',
+    duration: 60, // Changed from "1 hour" to 60
     description: 'Custom hair design with sharp line-up and styling',
     category: 'Cuts'
   }

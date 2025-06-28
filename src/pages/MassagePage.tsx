@@ -56,7 +56,7 @@ const massageServices = [
     provider: 'Sarah Wellness',
     providerId: 'massage1',
     price: 90,
-    duration: '60 min',
+    duration: 60, // Changed from "60 min" to 60
     description: 'Therapeutic massage targeting muscle tension and knots',
     category: 'Massage'
   },
@@ -66,7 +66,7 @@ const massageServices = [
     provider: 'Grace Healing Hands',
     providerId: 'massage3',
     price: 120,
-    duration: '75 min',
+    duration: 75, // Changed from "75 min" to 75
     description: 'Relaxing massage using heated volcanic stones',
     category: 'Massage'
   },
@@ -76,7 +76,7 @@ const massageServices = [
     provider: 'David Therapeutic',
     providerId: 'massage2',
     price: 110,
-    duration: '50 min',
+    duration: 50, // Changed from "50 min" to 50
     description: 'Specialized massage for athletic recovery and performance',
     category: 'Massage'
   }

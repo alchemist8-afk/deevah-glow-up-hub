@@ -56,7 +56,7 @@ const dreadlockServices = [
     provider: 'Marcus Loc Master',
     providerId: 'locs1',
     price: 120,
-    duration: '4-6 hours',
+    duration: 300, // Changed from "4-6 hours" to 300 (5 hours average)
     description: 'Complete starter loc installation with consultation and aftercare guide',
     category: 'Dreadlocks'
   },
@@ -66,7 +66,7 @@ const dreadlockServices = [
     provider: 'Sister Locks Studio',
     providerId: 'locs2',
     price: 80,
-    duration: '2-3 hours',
+    duration: 150, // Changed from "2-3 hours" to 150 (2.5 hours average)
     description: 'Professional loc maintenance, retwist, and scalp treatment',
     category: 'Dreadlocks'
   },
@@ -76,7 +76,7 @@ const dreadlockServices = [
     provider: 'Natural Crown Locs',
     providerId: 'locs3',
     price: 65,
-    duration: '1-2 hours',
+    duration: 90, // Changed from "1-2 hours" to 90 (1.5 hours average)
     description: 'Creative loc styling for special occasions and everyday wear',
     category: 'Dreadlocks'
   }
