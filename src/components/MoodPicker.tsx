@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -17,11 +16,11 @@ interface MoodPickerProps {
 }
 
 export function MoodPicker({ compact = false, onMoodSelect }: MoodPickerProps) {
-  const { selectedMood, setMood } = useMood();
+  const { selectedMood, setSelectedMood } = useMood();
 
   const handleMoodSelect = (mood: MoodType) => {
     const newMood = selectedMood === mood ? null : mood;
-    setMood(newMood);
+    setSelectedMood(newMood);
     if (onMoodSelect && newMood) {
       onMoodSelect(newMood);
     }

@@ -1,4 +1,3 @@
-
 import { Layout } from "@/components/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -27,7 +26,7 @@ import { useWallet } from "@/contexts/WalletContext";
 import { useBookings } from "@/hooks/useBookings";
 import { useServices } from "@/hooks/useServices";
 import { useProducts } from "@/hooks/useProducts";
-import { useMood } from "@/contexts/MoodContext";
+import { useMood, MoodType } from "@/contexts/MoodContext";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -66,10 +65,10 @@ const EnhancedClientDashboard = () => {
   const pastBookings = myBookings.filter(b => b.status === 'completed');
 
   const moodOptions = [
-    { id: 'calm', label: '🌿 Calm', color: 'bg-green-100 text-green-800' },
-    { id: 'fast', label: '⚡ Fast', color: 'bg-yellow-100 text-yellow-800' },
-    { id: 'social', label: '💃 Social', color: 'bg-pink-100 text-pink-800' },
-    { id: 'private', label: '🤫 Private', color: 'bg-purple-100 text-purple-800' }
+    { id: 'calm' as MoodType, label: '🌿 Calm', color: 'bg-green-100 text-green-800' },
+    { id: 'fast' as MoodType, label: '⚡ Fast', color: 'bg-yellow-100 text-yellow-800' },
+    { id: 'social' as MoodType, label: '💃 Social', color: 'bg-pink-100 text-pink-800' },
+    { id: 'private' as MoodType, label: '🤫 Private', color: 'bg-purple-100 text-purple-800' }
   ];
 
   const filteredServices = selectedMood 
